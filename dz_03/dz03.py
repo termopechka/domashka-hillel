@@ -1,9 +1,9 @@
 # Напишіть функцію, яка приймає рядок і повертає його довжину.
 def return_length(text_row: str) -> int:
-    return len(text_row.replace(' ', ''))
+    return len(text_row)
 
 
-row = '   i   love    python    '
+row = 'i love python'
 print(return_length(row))
 
 # Створіть функцію, яка приймає два рядки і повертає об'єднаний рядок.
