@@ -1,0 +1,24 @@
+{
+  "customers": [
+    {
+      "name": "Ivan",
+      "email": "ivan@example.com",
+      "orders": []
+    },
+    {
+      "name": "Maria",
+      "email": "maria@example.com",
+      "orders": []
+    }
+  ],
+  "products": {
+    "apple": {
+      "price": 200,
+      "stock": 50
+    },
+    "banana": {
+      "price": 100,
+      "stock": 20
+    }
+  }
+}
