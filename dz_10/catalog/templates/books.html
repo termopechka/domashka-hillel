@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %} Books {% endblock %}
+
+{% block body %}
+    <h1> Books </h1>
+    <table>
+        {% for book in obj %}
+            <thead> {{ book|linebreaks }} </thead>
+        {% endfor %}
+    </table>
+    <h1> Alphabetical Search </h1>
+    <div class="alphabet">
+        {% for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" %}
+            <a href="{% url 'books_by_letter' letter=char %}">{{ char }}</a>
+        {% endfor %}
+    </div>
+{% endblock %}

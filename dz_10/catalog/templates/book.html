@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block title %} Book {% endblock %}
+
+{% block body %}
+    Title: {{ book.title }}<br>
+    Author: {{ book.author }}<br>
+    Price: {{ book.price }}<br>
+    Description: {{ book.description }}<br>
+    Stock: {{ book.stock }}<br>
+    Category: {{ book.category }}<br>
+{% endblock %}
