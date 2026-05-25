@@ -1,0 +1,133 @@
+[
+{
+    "model": "sessions.session",
+    "pk": "639ys0zdlzmtaty67thyjm6y39ntczsz",
+    "fields": {
+        "session_data": ".eJxVjEEOwiAQAP_C2RAorIBH730DWXZXqZo2Ke3J-HdD0oNeZybzVhn3rea9yZonVhdl1emXFaSnzF3wA-f7ommZt3Uquif6sE2PC8vrerR_g4qt9m00zGhMZOvJQkIxDI4Ab0YKuCEGIhqAUXz0Es5FLISCGBw4H1JSny_r8Tf2:1wLh1T:WECeEaJl8KnmuRKdzFVvjE3v1U3EIKnqIno_xjNtVJY",
+        "expire_date": "2026-05-23T12:43:11.214Z"
+    }
+},
+{
+    "model": "sessions.session",
+    "pk": "yfzc43qx80yxltb7ab33d3pt5qwfs7mi",
+    "fields": {
+        "session_data": ".eJxVjEEOwiAQAP_C2RAorIBH730DWXZXqZo2Ke3J-HdD0oNeZybzVhn3rea9yZonVhdl1emXFaSnzF3wA-f7ommZt3Uquif6sE2PC8vrerR_g4qt9m00zGhMZOvJQkIxDI4Ab0YKuCEGIhqAUXz0Es5FLISCGBw4H1JSny_r8Tf2:1wQrBh:bN7sRCIE4RFSkngteQ8z0tsq-LnknRzi-c7s3dUCZs0",
+        "expire_date": "2026-06-06T18:35:05.190Z"
+    }
+},
+{
+    "model": "BookShop.category",
+    "pk": 1,
+    "fields": {
+        "name": "electronics",
+        "slug": "el"
+    }
+},
+{
+    "model": "BookShop.book",
+    "pk": 1,
+    "fields": {
+        "title": "Linux From Scratch",
+        "author": "Джирард Бекманс",
+        "price": "100.00",
+        "description": "Способ установки Linux, а также книга Герарда Бикманса и др., описывающая процесс сборки своего дистрибутива операционной системы Linux из исходных кодов.",
+        "stock": 15,
+        "category": 1
+    }
+},
+{
+    "model": "BookShop.book",
+    "pk": 2,
+    "fields": {
+        "title": "asdasd",
+        "author": "aaa",
+        "price": "100.00",
+        "description": "asdads",
+        "stock": 50,
+        "category": 1
+    }
+},
+{
+    "model": "BookShop.book",
+    "pk": 3,
+    "fields": {
+        "title": "aaaaaaaa",
+        "author": "bbbbbbbb",
+        "price": null,
+        "description": "Some text xD",
+        "stock": 15,
+        "category": 1
+    }
+},
+{
+    "model": "BookShop.book",
+    "pk": 4,
+    "fields": {
+        "title": "gagas",
+        "author": "bbbbbb11",
+        "price": null,
+        "description": "Very interesting book",
+        "stock": 10,
+        "category": 1
+    }
+},
+{
+    "model": "BookShop.book",
+    "pk": 5,
+    "fields": {
+        "title": "hhhhhhhhh",
+        "author": "ccccccccc",
+        "price": "86.00",
+        "description": "jkkaadry",
+        "stock": 90,
+        "category": 1
+    }
+},
+{
+    "model": "BookShop.book",
+    "pk": 6,
+    "fields": {
+        "title": "hhhhhhhhh",
+        "author": "ccccccccc",
+        "price": "86.00",
+        "description": "jkkaadry",
+        "stock": 90,
+        "category": 1
+    }
+},
+{
+    "model": "BookShop.book",
+    "pk": 7,
+    "fields": {
+        "title": "bbzxzxbX",
+        "author": "llujhyu",
+        "price": null,
+        "description": "bla bla bla",
+        "stock": 92,
+        "category": 1
+    }
+},
+{
+    "model": "BookShop.book",
+    "pk": 8,
+    "fields": {
+        "title": "gggg",
+        "author": "lljka",
+        "price": null,
+        "description": "Yeah",
+        "stock": 32,
+        "category": 1
+    }
+},
+{
+    "model": "BookShop.book",
+    "pk": 9,
+    "fields": {
+        "title": "fffff",
+        "author": "fff",
+        "price": "23.00",
+        "description": "iii",
+        "stock": 78,
+        "category": 1
+    }
+}]

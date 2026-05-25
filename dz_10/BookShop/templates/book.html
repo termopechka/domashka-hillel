@@ -1,12 +1,27 @@
 {% extends 'base.html' %}
-
+{% load static %}
 {% block title %} Book {% endblock %}
 
-{% block body %}
-    Title: {{ book.title }}<br>
-    Author: {{ book.author }}<br>
-    Price: {{ book.price }}<br>
-    Description: {{ book.description }}<br>
-    Stock: {{ book.stock }}<br>
-    Category: {{ book.category }}<br>
+{% block main %}
+    <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden mx-auto mt-5 align-content-center justify-content-center w-25 h-25 ">
+        <div class="row g-0 align-items-center">
+            <div class="col-md-4 bg-light text-center p-3">
+                <img src="{% static 'png/book.png' %}" class="img-fluid rounded-3 shadow" alt="Обложка книги"
+                     style="max-height: 220px; object-fit: cover;">
+            </div>
+            <div class="col-md-8">
+                <div class="card-body p-4">
+                    <h5 class="card-title fw-bold text-dark mb-1">{{ book.title }}</h5>
+                    <p class="text-muted small mb-3">Автор: <a href="#" class="text-decoration-none fw-semibold">{{ book.author }}</a></p>
+                    <p class="card-text text-secondary line-clamp">
+                        {{ book.description }}
+                    </p>
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <span class="fs-4 fw-bold text-dark">{{ book.price }}</span>
+                        <button class="btn btn-primary rounded-pill px-4 shadow-sm">Купить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}

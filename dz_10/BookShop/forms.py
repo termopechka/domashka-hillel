@@ -3,7 +3,7 @@ from django import forms
 from .models import Category, Book
 
 
-class BookForm(forms.Form):
+class BookForm(forms.ModelForm):
     title = forms.CharField(max_length=100)
     author = forms.CharField(max_length=100)
     price = forms.DecimalField(max_digits=10, decimal_places=2)

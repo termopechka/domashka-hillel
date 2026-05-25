@@ -10,9 +10,12 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+from django.conf.global_settings import STATICFILES_DIRS, AUTH_USER_MODEL
 
-from django.conf.global_settings import STATICFILES_DIRS
+# Проверяем, запущен ли Django внутри контейнера Docker
+IS_IN_DOCKER = os.environ.get('DB_HOST') == 'db'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -22,13 +25,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-1lr66g7&w+*u3e2t!n$qu6^9it-ou6!)$gc^k&f@#votl6c*zb'
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -54,6 +56,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'BookShop.urls'
 
+AUTH_USER_MODEL = 'BookShop.User'
+
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -75,10 +80,21 @@ WSGI_APPLICATION = 'BookShop.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'django_db') if IS_IN_DOCKER else 'postgres',
+        'USER': os.environ.get('DB_USER', 'django_user') if IS_IN_DOCKER else 'postgres',
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'my_super_safe_password') if IS_IN_DOCKER else '12345678',
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 

@@ -1,3 +1,4 @@
+from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.urls import reverse
 
@@ -37,3 +38,15 @@ class Book(models.Model):
 
     def get_absolute_url(self):
         return reverse('book_detail', kwargs={'pk': self.pk})
+
+
+class User(AbstractUser):
+    username = models.CharField(max_length=100, unique=True, blank=True, null=True)
+    email = models.EmailField(unique=True)
+    native_name = models.CharField(max_length=5,)
+    phone_number = models.CharField(max_length=11,)
+    USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = ['email', 'first_name', 'last_name']
+
+    def __str__(self):
+        return '{}'.format(self.email)
