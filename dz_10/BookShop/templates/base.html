@@ -22,26 +22,34 @@
                         <a class="nav-link active" aria-current="page" href="{% url 'index' %}">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'books' %}">Books</a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
-                           aria-expanded="false">
-                            Dropdown
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">Action</a></li>
-                            <li><a class="dropdown-item" href="#">Another action</a></li>
-                            <li>
-                                <hr class="dropdown-divider">
-                            </li>
-                            <li><a class="dropdown-item" href="#">Something else here</a></li>
-                        </ul>
+                        <a class="nav-link" href="{% url 'book:list' %}">Books</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link disabled" aria-disabled="true">Disabled</a>
+                        {% if perms.order.add %}
+                            <a class="nav-link" href="{% url 'order:list' %}">Orders</a>
+                        {% endif %}
+                    </li>
+                    <li class="nav-item">
+                        {% if perms.book.add %}
+                            <a class="nav-link" href="{% url 'book:add' %}">Add Book</a>
+                        {% endif %}
                     </li>
                 </ul>
+                <div class="ms-auto">
+                    {% if user.is_authenticated %}
+                        <span class="navbar-text text-black-50 me-3 fw-semibold">
+                            {{ user.username }}
+                        </span>
+                        <form action="{% url 'auth:logout' %}" method="post" class="d-inline me-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Выйти</button>
+                        </form>
+                    {% else %}
+                        <a href="{% url 'auth:login' %}" class="btn btn-primary-dark btn-sm me-2">Войти</a>
+                        <a href="{% url 'auth:register' %}" class="btn btn-primary btn-sm me-2">Регистрация</a>
+                    {% endif %}
+                </div>
+
                 <form class="d-flex" role="search" method="GET">
                     <input class="form-control me-2" type="search" name="search" placeholder="Search"
                            value="{{ search_query }}" aria-label="Search"/>
@@ -82,5 +90,6 @@
         </div>
     </div>
 </footer>
+<script src="{% static 'js/bootstrap.js' %}"></script>
 </body>
 </html>

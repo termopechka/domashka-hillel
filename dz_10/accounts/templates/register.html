@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .register-card {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px; /* Немного шире, так как у регистрации больше полей */
+        }
+        .register-card h3 {
+            margin-top: 0;
+            margin-bottom: 24px;
+            text-align: center;
+            color: #1f2937;
+            font-size: 24px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #4b5563;
+        }
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #10b981; /* Зеленый фокус для регистрации */
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background-color: #10b981; /* Зеленая кнопка */
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn-submit:hover {
+            background-color: #059669;
+        }
+        .error-list {
+            color: #dc2626;
+            font-size: 12px;
+            margin: 4px 0 0 0;
+            padding-left: 15px;
+        }
+        .help-text {
+            color: #6b7280;
+            font-size: 11px;
+            margin-top: 4px;
+            display: block;
+        }
+        .login-link {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        .login-link a {
+            color: #10b981;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="register-card">
+        <h3>Регистрация</h3>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            <!-- Динамический цикл по всем полям формы регистрации Django -->
+            {% for field in form %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+
+                    <!-- Рендерим сам инпут вручную, подмешивая наш класс -->
+                    <input type="{{ field.field.widget.input_type|default:'text' }}"
+                           name="{{ field.html_name }}"
+                           id="{{ field.id_for_label }}"
+                           class="form-input"
+                           placeholder="Введите {{ field.label|lower }}">
+
+                    <!-- Подсказки к паролю (требования Django к сложности) -->
+                    {% if field.help_text %}
+                        <span class="help-text">{{ field.help_text|safe }}</span>
+                    {% endif %}
+
+                    <!-- Ошибки конкретного поля -->
+                    {% if field.errors %}
+                        <ul class="error-list">
+                            {% for error in field.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+            <button type="submit" class="btn-submit">Создать аккаунт</button>
+        </form>
+
+        <div class="login-link">
+            Уже есть аккаунт? <a href="{% url 'accounts:login' %}">Войти</a>
+        </div>
+    </div>
+
+</body>
+</html>
