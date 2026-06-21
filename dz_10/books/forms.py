@@ -1,6 +1,7 @@
 from django import forms
 
 from .models import Category, Book
+from orders.models import Order
 
 
 class BookForm(forms.ModelForm):
@@ -14,3 +15,13 @@ class BookForm(forms.ModelForm):
     class Meta:
         model = Book
         fields = '__all__'
+
+
+class CheckoutForm(forms.ModelForm):
+    payment_method = forms.CharField(widget=forms.HiddenInput)
+    postal_code = forms.CharField(widget=forms.HiddenInput)
+    country = forms.CharField(widget=forms.HiddenInput)
+
+    class Meta:
+        model = Order
+        fields = ['payment_method', 'postal_code', 'country']

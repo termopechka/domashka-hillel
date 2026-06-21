@@ -25,6 +25,9 @@
                         <a class="nav-link" href="{% url 'book:list' %}">Books</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{% url 'book:cart_view' %}">Cart</a>
+                    </li>
+                    <li class="nav-item">
                         {% if perms.order.add %}
                             <a class="nav-link" href="{% url 'order:list' %}">Orders</a>
                         {% endif %}

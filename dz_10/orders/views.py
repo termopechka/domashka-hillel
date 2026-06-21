@@ -25,3 +25,5 @@ class OrderListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         context = super(OrderListView, self).get_context_data(**kwargs)
         context['search_query'] = self.request.GET.get('search', '')
         return context
+
+
