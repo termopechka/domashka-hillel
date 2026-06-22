@@ -18,10 +18,13 @@ class BookForm(forms.ModelForm):
 
 
 class CheckoutForm(forms.ModelForm):
-    payment_method = forms.CharField(widget=forms.HiddenInput)
-    postal_code = forms.CharField(widget=forms.HiddenInput)
-    country = forms.CharField(widget=forms.HiddenInput)
-
     class Meta:
         model = Order
-        fields = ['payment_method', 'postal_code', 'country']
+        fields = ['shipping_address', 'city', 'postal_code', 'country', 'payment_method']
+        widgets = {
+            'shipping_address': forms.TextInput(attrs={'class': 'form-control'}),
+            'city': forms.TextInput(attrs={'class': 'form-control'}),
+            'postal_code': forms.TextInput(attrs={'class': 'form-control'}),
+            'country': forms.TextInput(attrs={'class': 'form-control'}),
+            'payment_method': forms.Select(attrs={'class': 'form-select'}),
+        }

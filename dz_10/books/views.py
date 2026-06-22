@@ -1,17 +1,25 @@
+import os
+
+from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.core.mail import send_mail
+from django.db import transaction
 from django.db.models import Q
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
+from django.urls import reverse_lazy, reverse
 from django.views import View
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, DetailView, CreateView
 from silk.profiling.profiler import silk_profile
-
-from orders.models import OrderItem
+from orders.models import OrderItem, Order
 from .forms import CheckoutForm
 from .models import Book
 import logging
+import stripe
 
 logger = logging.getLogger(__name__)
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
+
 
 class BooksListView(ListView):
     model = Book
@@ -86,38 +94,100 @@ def clear_cart(request):
 
 
 class CheckoutView(LoginRequiredMixin, View):
-    def get(self, request):
+    login_url = reverse_lazy('accounts:login')
+
+    def get_cart_books(self):
         cart = self.request.session.get('cart', {})
-        book_ids = [key for key in cart.keys()]
-        books = Book.objects.filter(pk__in=book_ids)
-        for itm in books:
-            itm.quantity = cart[str(itm.pk)]
+        books = list(Book.objects.filter(pk__in=cart.keys()))
+
+        for book in books:
+            book.quantity = cart.get(str(book.pk), cart.get(book.pk, 0))
+
+        return cart, books
+
+    def get(self, request):
+        _, books = self.get_cart_books()
+
         return render(request,'cart.html', {'cart_obj': books, 'form': CheckoutForm()})
 
     def post(self, request):
-        cart = self.request.session.get('cart', {})
-        book_ids = [key for key in cart.keys()]
-        books = Book.objects.filter(pk__in=book_ids)
+        cart, books = self.get_cart_books()
 
         user_order_details = CheckoutForm(request.POST)
 
         if user_order_details.is_valid():
-            user_order_details = user_order_details.save(commit=False)
-            user_order_details.user = request.user
-            user_order_details.save()
+            with transaction.atomic():
+                user_order_details = user_order_details.save(commit=False)
+                user_order_details.user = request.user
+                user_order_details.total_price = sum(
+                    (book.price or 0) * book.quantity for book in books
+                )
+                user_order_details.save()
 
-            for cart_key in cart.keys():
-                order_item = OrderItem()
-                order_item.book = Book.objects.get(pk=int(cart_key))
-                order_item.order = user_order_details
-                order_item.quantity = cart[cart_key]
-                order_item.save()
+                line_items = []
+                for book in books:
+                    order_item = OrderItem()
+                    order_item.book = book
+                    order_item.book_name = book.title
+                    order_item.order = user_order_details
+                    order_item.price = book.price or 0
+                    order_item.quantity = book.quantity
+                    order_item.save()
 
-            request.session['cart'] = {}
-            request.session.modified = True
+                    line_items.append({
+                        'price_data': {
+                            'currency': 'eur',
+                            'product_data': {
+                                'name': book.title,
+                            },
+                            'unit_amount': int((book.price or 0) * 100),
+                        },
+                        'quantity': book.quantity,
+                    })
 
-            return redirect('index')
+                checkout_session = stripe.checkout.Session.create(
+                    payment_method_types=['card'],
+                    line_items=line_items,
+                     mode='payment',
+                     success_url=request.build_absolute_uri(reverse('book:payment_success')) + f"?session_id={{CHECKOUT_SESSION_ID}}&order_id={user_order_details.id}",
+                     cancel_url=request.build_absolute_uri(reverse('book:payment_cancel')),
+                     metadata={'order_id': user_order_details.id},
+                )
 
-        return render(request,'cart.html', {'cart_obj': books, 'form': CheckoutForm()})
+                request.session['cart'] = {}
+                request.session.modified = True
+
+                return redirect(checkout_session.url, code=303)
+
+        # return redirect('index')
+
+        return render(request,'cart.html', {'cart_obj': books, 'form': user_order_details})
 
 
+def payment_success(request):
+    order_id = request.GET.get('order_id')
+
+    if order_id:
+        order = get_object_or_404(Order, id=order_id)
+
+        if not getattr(order, 'is_paid', False):
+            order.is_paid = True
+            order.save()
+
+            subject = f'Заказ №{order.id} успешно оплачен!'
+            message = f'Спасибо за покупку, {request.user.username}!\nСумма оплаты: {order.total_price} евро.'
+            recipient_list = [request.user.email]
+
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipient_list,
+                fail_silently=False,
+            )
+
+    return redirect('index')
+
+
+def payment_cancel(request):
+    return redirect('index')
