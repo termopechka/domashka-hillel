@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
+{% load i18n %}
 {% load static %}
-{% block title %} Book {% endblock %}
+{% block title %} {% translate 'Book' %} {% endblock %}
 
 {% block main %}
     <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden mx-auto mt-5 align-content-center justify-content-center w-25 h-25 ">
@@ -12,13 +13,13 @@
             <div class="col-md-8">
                 <div class="card-body p-4">
                     <h5 class="card-title fw-bold text-dark mb-1">{{ book.title }}</h5>
-                    <p class="text-muted small mb-3">Автор: <a href="#" class="text-decoration-none fw-semibold">{{ book.author }}</a></p>
+                    <p class="text-muted small mb-3">{% translate 'Author' %}: <a href="#" class="text-decoration-none fw-semibold">{{ book.author }}</a></p>
                     <p class="card-text text-secondary line-clamp">
                         {{ book.description }}
                     </p>
                     <div class="d-flex justify-content-between align-items-center mt-4">
                         <span class="fs-4 fw-bold text-dark">{{ book.price }}</span>
-                        <a href="{% url 'book:add_to_cart' pk=book.id %}" class="btn btn-primary rounded-pill px-4 shadow-sm">В корзину</a>
+                        <a href="{% url 'book:add_to_cart' pk=book.id %}" class="btn btn-primary rounded-pill px-4 shadow-sm">{% translate 'In cart' %}</a>
                     </div>
                 </div>
             </div>

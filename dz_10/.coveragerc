@@ -1,0 +1,10 @@
+[run]
+omit =
+    *migrations*
+    *apps.py
+    *admin.py
+    *wsgi.py
+    *asgi.py
+    manage.py
+    BookShop/urls.py
+    BookShop/__init__.py

@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
+{% load i18n %}
 {% load static %}
-{% block title %} Books {% endblock %}
+{% block title %} {% translate 'Books' %} {% endblock %}
 
 {% block main %}
     <section class="container mt-4">
@@ -12,7 +13,7 @@
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title">{{ book.title }}</h5>
                             <p class="card-text flex-grow-1">{{ book.description }}</p>
-                            <a href="{% url 'book:detail' pk=book.id %}" class="btn btn-primary mt-auto">Go somewhere</a>
+                            <a href="{% url 'book:detail' pk=book.id %}" class="btn btn-primary mt-auto">{% translate 'Details' %}</a>
                         </div>
                     </div>
                 </div>
@@ -32,7 +33,7 @@
                 {% if page_obj.has_previous %}
                     <a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}" aria-label="Previous">
                         <span aria-hidden="true">&laquo;</span>
-                        <span class="sr-only">Previous</span>
+                        <span class="sr-only">{% translate 'Previous' %}</span>
                     </a>
                 {% endif %}
             </li>
@@ -45,7 +46,7 @@
                 {% if page_obj.has_next %}
                     <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search_query }}" aria-label="Next">
                         <span aria-hidden="true">&raquo;</span>
-                        <span class="sr-only">Next</span>
+                        <span class="sr-only">{% translate 'Next' %}</span>
                     </a>
                 {% endif %}
             </li>

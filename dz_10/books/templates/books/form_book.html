@@ -1,14 +1,15 @@
+{% load i18n %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Add Book</title>
+    <title>{% translate 'Add Book' %}</title>
 </head>
 <body>
 <form action="/book/add/" method="post">
     {% csrf_token %}
-    {{ form }}
-    <input type="submit" value="Submit">
+    {{ form.as_p }}
+    <button type="submit">{% translate 'Submit' %}</button>
 </form>
 </body>
 </html>

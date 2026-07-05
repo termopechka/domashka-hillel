@@ -15,20 +15,28 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.conf import settings
+from django.conf.urls.i18n import i18n_patterns
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
+
+from books.urls import urlpatterns
 from .views import IndexView
 
 app_name = 'bookshop'
 
 urlpatterns = [
+    path('i18n/', include('django.conf.urls.i18n')),
+]
+
+urlpatterns += i18n_patterns(
     path('admin/', admin.site.urls),
     path('book/', include('books.urls', namespace='book')),
     path('auth/', include('accounts.urls', namespace='accounts')),
     path('orders/', include('orders.urls', namespace='orders')),
     path('', IndexView.as_view(), name='index'),
-]
+
+)
 
 
 if settings.DEBUG:

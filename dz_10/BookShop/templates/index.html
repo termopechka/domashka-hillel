@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %} Index {% endblock %}
-{% block main %} <h1 class="justify-content-center align-content-center text-center me-3"> Welcome to BookShop!</h1> {% endblock %}
+{% load i18n %}
+{% block title %} {% translate 'Index' %} {% endblock %}
+{% block main %} <h1 class="justify-content-center align-content-center text-center me-3">{% blocktranslate %} Welcome to BookShop! {% endblocktranslate %}</h1> {% endblock %}

@@ -1,15 +1,16 @@
 {% extends 'base.html' %}
+{% load i18n %}
 {% load static %}
-{% block title %} Orders {% endblock %}
+{% block title %} {% translate 'Orders' %} {% endblock %}
 
 {% block main %}
     <table class="table">
         <thead>
         <tr>
-            <th scope="col">Customer</th>
-            <th scope="col">Status</th>
-            <th scope="col">Payment Method</th>
-            <th scope="col">Total Price</th>
+            <th scope="col">{% translate 'Customers' %}</th>
+            <th scope="col">{% translate 'Status' %}</th>
+            <th scope="col">{% translate 'Payment Method' %}</th>
+            <th scope="col">{% translate 'Total Price' %}</th>
         </tr>
         </thead>
         <tbody>

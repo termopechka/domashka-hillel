@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from django.conf.global_settings import STATICFILES_DIRS, AUTH_USER_MODEL, LOGIN_REDIRECT_URL, LOGOUT_REDIRECT_URL, \
     SESSION_ENGINE
+from django.utils.translation import gettext_lazy as _
 
 # Проверяем, запущен ли Django внутри контейнера Docker
 IS_IN_DOCKER = os.environ.get('DB_HOST') == 'db'
@@ -35,6 +36,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'modeltranslation',
     'django_extensions',
     'debug_toolbar',
     'silk',
@@ -55,6 +57,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -97,14 +100,20 @@ WSGI_APPLICATION = 'BookShop.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'django_db') if IS_IN_DOCKER else 'postgres',
-        'USER': os.environ.get('DB_USER', 'django_user') if IS_IN_DOCKER else 'postgres',
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'my_super_safe_password') if IS_IN_DOCKER else '12345678',
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": f"redis://:{os.environ.get('REDIS_PASSWORD')}@redis:{os.environ.get('REDIS_PORT')}/{os.environ.get('DJANGO_REDIS_NAME')}"
+    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -144,6 +153,16 @@ AUTH_USER_MODEL = 'accounts.User'
 STATIC_URL = 'static/'
 
 # LOGIN_URL = "accounts:login"
+
+LANGUAGES = [
+    ('en', _('English')),
+    ('uk', _('Ukrainian')),
+]
+
+LANGUAGE_CODE = 'en'
+
+LOCALE_PATHS = [BASE_DIR / 'locale']
+
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
@@ -187,7 +206,8 @@ CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
 
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
 SESSION_SAVE_EVERY_REQUEST = True
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

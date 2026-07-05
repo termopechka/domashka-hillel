@@ -1,3 +1,4 @@
+{% load i18n %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -98,12 +99,12 @@
 <body>
 
     <div class="login-card">
-        <h3>Вход в аккаунт</h3>
+        <h3>{% translate 'Sign in' %}</h3>
 
         <!-- Ошибки валидации -->
         {% if form.errors %}
             <div class="error-block">
-                Неверный email или password.
+                {% translate 'Incorrect email or password' %}
             </div>
         {% endif %}
 
@@ -112,18 +113,18 @@
 
             <!-- Поле Email -->
             <div class="form-group">
-                <label for="{{ form.username.id_for_label }}">Имя пользователя</label>
+                <label for="{{ form.username.id_for_label }}">{% translate 'Username' %}</label>
                 <input
                        name="{{ form.username.name }}"
                        id="{{ form.username.id_for_label }}"
                        class="form-input"
-                       placeholder="username"
+                       placeholder="{% translate 'Username' %}"
                        value="{{ form.username.value|default:'' }}">
             </div>
 
             <!-- Поле Пароль -->
             <div class="form-group">
-                <label for="{{ form.password.id_for_label }}">Пароль</label>
+                <label for="{{ form.password.id_for_label }}">{% translate 'Password' %}</label>
                 <input type="password"
                        name="{{ form.password.name }}"
                        id="{{ form.password.id_for_label }}"
@@ -131,7 +132,7 @@
                        placeholder="••••••••">
             </div>
 
-            <button type="submit" class="btn-submit">Войти</button>
+            <button type="submit" class="btn-submit">{% translate 'Submit' %}</button>
         </form>
     </div>
 

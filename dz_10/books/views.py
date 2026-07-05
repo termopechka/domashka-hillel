@@ -1,11 +1,12 @@
+import asyncio
 import os
-
+from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import Q
-from django.shortcuts import redirect, render, get_object_or_404
+from django.shortcuts import redirect, render
 from django.urls import reverse_lazy, reverse
 from django.views import View
 from django.views.decorators.http import require_POST
@@ -68,10 +69,13 @@ class AddBookView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     template_name = 'books/form_book.html'
 
 
-def add_to_cart(request, pk):
+async def add_to_cart(request, pk):
+    pk_str = str(pk)
     cart = request.session.get('cart', {})
-    cart[pk] = cart.get(pk, 0) + 1
+    cart[pk_str] = cart.get(pk_str, 0) + 1
     request.session['cart'] = cart
+    request.session.modified = True
+    await sync_to_async(request.session.save, thread_sensitive=True)()
     return redirect('index')
 
 @require_POST
@@ -164,21 +168,24 @@ class CheckoutView(LoginRequiredMixin, View):
         return render(request,'cart.html', {'cart_obj': books, 'form': user_order_details})
 
 
-def payment_success(request):
+async def payment_success(request):
     order_id = request.GET.get('order_id')
 
     if order_id:
-        order = get_object_or_404(Order, id=order_id)
+        order = await Order.objects.aget(id=order_id)
 
         if not getattr(order, 'is_paid', False):
             order.is_paid = True
-            order.save()
+            await order.asave()
+
+            user = await request.auser()
 
             subject = f'Заказ №{order.id} успешно оплачен!'
             message = f'Спасибо за покупку, {request.user.username}!\nСумма оплаты: {order.total_price} евро.'
-            recipient_list = [request.user.email]
+            recipient_list = [user.email]
 
-            send_mail(
+            await asyncio.to_thread(
+                send_mail,
                 subject=subject,
                 message=message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
@@ -189,5 +196,5 @@ def payment_success(request):
     return redirect('index')
 
 
-def payment_cancel(request):
+async def payment_cancel(request):
     return redirect('index')

@@ -4,8 +4,8 @@ services:
   db:
     image: postgres:15
     volumes:
-      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
-      - postgres_data:/var/lib/postgresql/data
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:z
+      - postgres_data:/var/lib/postgresql/data:z
     env_file:
       - ./.env
     environment:
@@ -37,9 +37,12 @@ services:
       start_period: 5s
 
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uvicorn BookShop.asgi:application --host 0.0.0.0 --port 8000
     volumes:
-      - .:/app
+      - .:/app:z
     ports:
       - "8000:8000"
     env_file:

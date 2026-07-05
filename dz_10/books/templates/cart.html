@@ -1,16 +1,17 @@
 {% extends 'base.html' %}
+{% load i18n %}
 {% load static %}
-{% block title %} Cart {% endblock %}
+{% block title %} {% translate 'Cart' %} {% endblock %}
 
 {% block main %}
     <table class="table">
         <thead>
         <tr>
             <th scope="col">#</th>
-            <th scope="col">Title</th>
-            <th scope="col">Quantity</th>
-            <th scope="col">Price</th>
-            <th scope="col">Remove</th>
+            <th scope="col">{% translate 'Title' %}</th>
+            <th scope="col">{% translate 'Quantity' %}</th>
+            <th scope="col">{% translate 'Price' %}</th>
+            <th scope="col">{% translate 'Remove' %}</th>
         </tr>
         </thead>
         <tbody>
@@ -23,17 +24,17 @@
                 <td>
                     <form action="{% url 'book:remove_from_cart' book.id %}" method="POST">
                         {% csrf_token %}
-                        <button type="submit">Remove</button>
+                        <button type="submit">{% translate 'Remove' %}</button>
                     </form>
                 </td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
-    <a href="{% url 'book:clear_cart' %}" class="btn btn-primary rounded-pill px-4 shadow-sm">Clear Cart</a>
+    <a href="{% url 'book:clear_cart' %}" class="btn btn-primary rounded-pill px-4 shadow-sm">{% translate 'Clear Cart' %}</a>
     <form action="{% url 'book:cart_view' %}" method="post">
         {% csrf_token %}
         {{ form.as_p }}
-        <input type="submit" value="Submit">
+        <button type="submit">{% translate 'Submit' %}</button>
     </form>
 {% endblock %}
