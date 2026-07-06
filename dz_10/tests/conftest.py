@@ -1,12 +1,13 @@
 import pytest
 from pytest_factoryboy import register
 from django.test import Client, AsyncClient
-from .factories import UserFactory, BookFactory, OrderFactory, CategoryFactory
+from .factories import UserFactory, BookFactory, OrderFactory, CategoryFactory, OrderItemFactory
 
 register(UserFactory)
 register(BookFactory)
 register(OrderFactory)
 register(CategoryFactory)
+register(OrderItemFactory)
 
 
 @pytest.fixture()

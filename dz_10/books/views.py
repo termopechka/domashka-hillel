@@ -1,6 +1,7 @@
 import asyncio
+import logging
 import os
-from asgiref.sync import sync_to_async
+
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.mail import send_mail
@@ -15,7 +16,6 @@ from silk.profiling.profiler import silk_profile
 from orders.models import OrderItem, Order
 from .forms import CheckoutForm
 from .models import Book
-import logging
 import stripe
 
 logger = logging.getLogger(__name__)
@@ -23,6 +23,34 @@ stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
 
 class BooksListView(ListView):
+    """Display the paginated catalog of books.
+
+    Handles:
+        GET: Renders the list of books.
+
+    Args:
+        request: Django ``HttpRequest`` handled by ``ListView``.
+
+    Query Parameters:
+        search (str, optional): Filters books by title or description using a
+            case-insensitive contains lookup.
+        page (int, optional): Page number for pagination.
+
+    Path Parameters:
+        None.
+
+    Body:
+        None.
+
+    Returns:
+        HttpResponse: Rendered ``books/books.html`` template with ``books``
+        and ``search_query`` context values. Returns HTTP 200 for valid pages
+        and Django's standard pagination error response for invalid pages.
+
+    Permissions:
+        Public endpoint. Authentication is not required.
+    """
+
     model = Book
     context_object_name = 'books'
     template_name = 'books/books.html'
@@ -30,56 +58,165 @@ class BooksListView(ListView):
 
     @silk_profile(name='Book List View')
     def get(self, request, *args, **kwargs):
-        logger.info(f'User {request.user.username} requested a list of books.')
+        logger.info('User %s requested a list of books.', request.user.get_username())
 
-        response = super().get(request, *args, **kwargs)
-
-        return response
+        return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        result = super(BooksListView, self).get_queryset()
+        result = super().get_queryset().select_related('category')
         query = self.request.GET.get('search')
         if query:
-            result = Book.objects.filter(Q(title__icontains=query) | Q(description__icontains=query))
+            result = result.filter(Q(title__icontains=query) | Q(description__icontains=query))
         return result
 
     def get_context_data(self, **kwargs):
-        context = super(BooksListView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         context['search_query'] = self.request.GET.get('search', '')
         return context
 
 
 class BookDetailView(DetailView):
+    """Display details for a single book.
+
+    Handles:
+        GET: Renders the selected book detail page.
+
+    Args:
+        request: Django ``HttpRequest`` handled by ``DetailView``.
+
+    Query Parameters:
+        None.
+
+    Path Parameters:
+        pk (int): Primary key of the requested book.
+
+    Body:
+        None.
+
+    Returns:
+        HttpResponse: Rendered ``books/book.html`` template with ``book`` in
+        context and HTTP 200.
+        Http404: Returned by Django when no book exists for ``pk``.
+
+    Permissions:
+        Public endpoint. Authentication is not required.
+    """
+
     model = Book
     context_object_name = 'book'
     template_name = 'books/book.html'
-
-    def get_context_data(self, **kwargs):
-        context = super(BookDetailView, self).get_context_data(**kwargs)
-        context['book'] = self.object
-        return context
+    queryset = Book.objects.select_related('category')
 
 
 class AddBookView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    """Create a new book entry.
+
+    Handles:
+        GET: Renders the book creation form.
+        POST: Validates submitted book data and creates a book.
+
+    Args:
+        request: Django ``HttpRequest`` handled by ``CreateView``.
+
+    Query Parameters:
+        None.
+
+    Path Parameters:
+        None.
+
+    Body:
+        title (str): Book title.
+        author (str): Book author.
+        price (Decimal, optional): Book price.
+        description (str): Book description.
+        stock (int): Available stock count.
+        category (int, optional): Category primary key.
+
+    Returns:
+        HttpResponse: Rendered ``books/form_book.html`` with HTTP 200 for GET
+        or invalid POST data.
+        HttpResponseRedirect: Redirect to the model success URL after a valid
+        POST.
+        HttpResponseForbidden: HTTP 403 when an authenticated user lacks
+        ``books.add_book`` permission.
+
+    Permissions:
+        Requires authentication and ``books.add_book`` permission. Anonymous
+        users are redirected to ``/login/``.
+    """
+
     model = Book
-    permission_required = 'add_book'
+    permission_required = 'books.add_book'
     fields = ['title', 'author', 'price', 'description', 'stock', 'category']
     login_url = '/login/'
     raise_exception = True
     template_name = 'books/form_book.html'
 
 
-async def add_to_cart(request, pk):
+def add_to_cart(request, pk):
+    """Add one book unit to the session cart.
+
+    Handles:
+        GET: Increments the selected book quantity in ``request.session``.
+
+    Args:
+        request: Django ``HttpRequest`` with session support.
+        pk (int): Primary key of the book to add.
+
+    Query Parameters:
+        None.
+
+    Path Parameters:
+        pk (int): Book primary key from the URL.
+
+    Body:
+        None.
+
+    Returns:
+        HttpResponseRedirect: Redirects to ``index`` with HTTP 302 after the
+        cart session value is updated.
+
+    Permissions:
+        Public endpoint. Authentication is not required.
+    """
+
     pk_str = str(pk)
     cart = request.session.get('cart', {})
     cart[pk_str] = cart.get(pk_str, 0) + 1
     request.session['cart'] = cart
     request.session.modified = True
-    await sync_to_async(request.session.save, thread_sensitive=True)()
     return redirect('index')
+
 
 @require_POST
 def remove_from_cart(request, pk):
+    """Remove a book from the session cart.
+
+    Handles:
+        POST: Deletes the selected book key from ``request.session['cart']``.
+
+    Args:
+        request: Django ``HttpRequest`` with session support.
+        pk (int): Primary key of the book to remove.
+
+    Query Parameters:
+        None.
+
+    Path Parameters:
+        pk (int): Book primary key from the URL.
+
+    Body:
+        None.
+
+    Returns:
+        HttpResponseRedirect: Redirects to ``index`` with HTTP 302.
+        HttpResponseNotAllowed: HTTP 405 for non-POST requests, enforced by
+        ``require_POST``.
+
+    Permissions:
+        Public endpoint. Authentication is not required.
+    """
+
     cart = request.session.get('cart', {})
     pk = str(pk)
     if pk in cart:
@@ -91,6 +228,30 @@ def remove_from_cart(request, pk):
 
 
 def clear_cart(request):
+    """Clear all items from the session cart.
+
+    Handles:
+        GET: Empties ``request.session['cart']``.
+
+    Args:
+        request: Django ``HttpRequest`` with session support.
+
+    Query Parameters:
+        None.
+
+    Path Parameters:
+        None.
+
+    Body:
+        None.
+
+    Returns:
+        HttpResponseRedirect: Redirects to ``index`` with HTTP 302.
+
+    Permissions:
+        Public endpoint. Authentication is not required.
+    """
+
     cart = request.session.get('cart', {})
     cart.clear()
     request.session['cart'] = cart
@@ -98,11 +259,46 @@ def clear_cart(request):
 
 
 class CheckoutView(LoginRequiredMixin, View):
+    """Display the cart and create Stripe checkout sessions for orders.
+
+    Handles:
+        GET: Renders the current cart and checkout form.
+        POST: Validates shipping/payment data, creates an order and order
+        items, creates a Stripe checkout session, clears the cart, and
+        redirects to Stripe.
+
+    Args:
+        request: Django ``HttpRequest`` handled by ``View``.
+
+    Query Parameters:
+        None.
+
+    Path Parameters:
+        None.
+
+    Body:
+        shipping_address (str): Delivery street address.
+        city (str): Delivery city.
+        postal_code (str): Delivery postal code.
+        country (str): Delivery country.
+        payment_method (str): Selected payment method from ``Order`` choices.
+
+    Returns:
+        HttpResponse: Rendered ``cart.html`` with ``cart_obj`` and ``form`` on
+        GET or invalid POST data.
+        HttpResponseRedirect: Redirects to Stripe checkout with HTTP 303 after
+        a valid POST.
+
+    Permissions:
+        Requires authentication. Anonymous users are redirected to the
+        ``accounts:login`` route.
+    """
+
     login_url = reverse_lazy('accounts:login')
 
     def get_cart_books(self):
         cart = self.request.session.get('cart', {})
-        books = list(Book.objects.filter(pk__in=cart.keys()))
+        books = list(Book.objects.filter(pk__in=cart.keys()).select_related('category'))
 
         for book in books:
             book.quantity = cart.get(str(book.pk), cart.get(book.pk, 0))
@@ -112,7 +308,7 @@ class CheckoutView(LoginRequiredMixin, View):
     def get(self, request):
         _, books = self.get_cart_books()
 
-        return render(request,'cart.html', {'cart_obj': books, 'form': CheckoutForm()})
+        return render(request, 'cart.html', {'cart_obj': books, 'form': CheckoutForm()})
 
     def post(self, request):
         cart, books = self.get_cart_books()
@@ -128,15 +324,17 @@ class CheckoutView(LoginRequiredMixin, View):
                 )
                 user_order_details.save()
 
+                order_items = []
                 line_items = []
                 for book in books:
-                    order_item = OrderItem()
-                    order_item.book = book
-                    order_item.book_name = book.title
-                    order_item.order = user_order_details
-                    order_item.price = book.price or 0
-                    order_item.quantity = book.quantity
-                    order_item.save()
+                    price = book.price or 0
+                    order_items.append(OrderItem(
+                        book=book,
+                        book_name=book.title,
+                        order=user_order_details,
+                        price=price,
+                        quantity=book.quantity,
+                    ))
 
                     line_items.append({
                         'price_data': {
@@ -144,18 +342,20 @@ class CheckoutView(LoginRequiredMixin, View):
                             'product_data': {
                                 'name': book.title,
                             },
-                            'unit_amount': int((book.price or 0) * 100),
+                            'unit_amount': int(price * 100),
                         },
                         'quantity': book.quantity,
                     })
 
+                OrderItem.objects.bulk_create(order_items)
+
                 checkout_session = stripe.checkout.Session.create(
                     payment_method_types=['card'],
                     line_items=line_items,
-                     mode='payment',
-                     success_url=request.build_absolute_uri(reverse('book:payment_success')) + f"?session_id={{CHECKOUT_SESSION_ID}}&order_id={user_order_details.id}",
-                     cancel_url=request.build_absolute_uri(reverse('book:payment_cancel')),
-                     metadata={'order_id': user_order_details.id},
+                    mode='payment',
+                    success_url=request.build_absolute_uri(reverse('book:payment_success')) + f"?session_id={{CHECKOUT_SESSION_ID}}&order_id={user_order_details.id}",
+                    cancel_url=request.build_absolute_uri(reverse('book:payment_cancel')),
+                    metadata={'order_id': user_order_details.id},
                 )
 
                 request.session['cart'] = {}
@@ -165,14 +365,48 @@ class CheckoutView(LoginRequiredMixin, View):
 
         # return redirect('index')
 
-        return render(request,'cart.html', {'cart_obj': books, 'form': user_order_details})
+        return render(request, 'cart.html', {'cart_obj': books, 'form': user_order_details})
 
 
 async def payment_success(request):
+    """Handle the Stripe success redirect for a completed payment.
+
+    Handles:
+        GET: Reads order metadata from the query string, marks the order as
+        paid when possible, sends a confirmation email, and redirects home.
+
+    Args:
+        request: Django ``HttpRequest`` handled asynchronously.
+
+    Query Parameters:
+        order_id (int, optional): Order primary key to update.
+        session_id (str, optional): Stripe checkout session identifier. The
+            current implementation accepts it in the URL but does not read it.
+
+    Path Parameters:
+        None.
+
+    Body:
+        None.
+
+    Returns:
+        HttpResponseRedirect: Redirects to ``index`` with HTTP 302 after
+        processing. Invalid or missing ``order_id`` also redirects to
+        ``index``.
+
+    Permissions:
+        Public callback endpoint. It uses the current request user for the
+        confirmation email when an order is updated.
+    """
+
     order_id = request.GET.get('order_id')
 
     if order_id:
-        order = await Order.objects.aget(id=order_id)
+        try:
+            order = await Order.objects.aget(id=order_id)
+        except (Order.DoesNotExist, ValueError, TypeError):
+            logger.warning('Payment success callback received invalid order_id=%s', order_id)
+            return redirect('index')
 
         if not getattr(order, 'is_paid', False):
             order.is_paid = True
@@ -181,7 +415,7 @@ async def payment_success(request):
             user = await request.auser()
 
             subject = f'Заказ №{order.id} успешно оплачен!'
-            message = f'Спасибо за покупку, {request.user.username}!\nСумма оплаты: {order.total_price} евро.'
+            message = f'Спасибо за покупку, {user.username}!\nСумма оплаты: {order.total_price} евро.'
             recipient_list = [user.email]
 
             await asyncio.to_thread(
@@ -197,4 +431,28 @@ async def payment_success(request):
 
 
 async def payment_cancel(request):
+    """Handle the Stripe cancellation redirect.
+
+    Handles:
+        GET: Redirects the user back to the home page.
+
+    Args:
+        request: Django ``HttpRequest`` handled asynchronously.
+
+    Query Parameters:
+        None.
+
+    Path Parameters:
+        None.
+
+    Body:
+        None.
+
+    Returns:
+        HttpResponseRedirect: Redirects to ``index`` with HTTP 302.
+
+    Permissions:
+        Public callback endpoint. Authentication is not required.
+    """
+
     return redirect('index')

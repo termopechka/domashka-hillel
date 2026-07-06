@@ -2,7 +2,7 @@ import factory
 from factory import fuzzy
 from django.contrib.auth import get_user_model
 from books.models import Book, Category
-from orders.models import Order
+from orders.models import Order, OrderItem
 
 User = get_user_model()
 
@@ -38,7 +38,23 @@ class OrderFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Order
 
-    user_id = factory.SubFactory(UserFactory)
+    user = factory.SubFactory(UserFactory)
+    shipping_address = factory.Sequence(lambda n: f"{n} Test Street")
+    city = "Kyiv"
+    postal_code = "01001"
+    country = "Ukraine"
+    payment_method = Order.PaymentMethod.CARD
     total_price = factory.fuzzy.FuzzyDecimal(10.00, 500.00)
-    status = 'pending'
+    status = Order.Status.NEW
     payment_id = factory.Sequence(lambda n: f"ch_{n}xyz")
+
+
+class OrderItemFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = OrderItem
+
+    order = factory.SubFactory(OrderFactory)
+    book = factory.SubFactory(BookFactory)
+    book_name = factory.Sequence(lambda n: f"Book Title {n}")
+    price = factory.fuzzy.FuzzyDecimal(10.00, 100.00)
+    quantity = 1

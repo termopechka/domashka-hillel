@@ -1,0 +1,6 @@
+| Name               |    Stmts |     Miss |    Cover |   Missing |
+|------------------- | -------: | -------: | -------: | --------: |
+| accounts/models.py |       13 |        0 |     100% |           |
+| books/models.py    |       24 |        0 |     100% |           |
+| orders/models.py   |       40 |        0 |     100% |           |
+| **TOTAL**          |   **77** |    **0** | **100%** |           |
