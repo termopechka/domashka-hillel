@@ -76,14 +76,21 @@ coverage run -m pytest tests/test_models.py tests/test_generated_model_coverage.
 coverage report --include=accounts/models.py,books/models.py,orders/models.py -m --format=markdown
 ```
 
-## API Endpoints
+## Endpoints
 
-The project currently exposes server-rendered Django web endpoints rather than
-a DRF JSON API. URLs are wrapped in Django `i18n_patterns`, so the active
+DRF API endpoints live under `/api/` and are not wrapped in language prefixes.
+Server-rendered Django pages are wrapped in `i18n_patterns`, so the active
 language prefix is part of the path, for example `/en/book/`.
 
 | Method | Endpoint | Name | Description | Access |
 | --- | --- | --- | --- | --- |
+| GET, POST | `/api/accounts/` | `api:accounts:user-list` | User API list/create | JWT authenticated |
+| GET, PUT, PATCH, DELETE | `/api/accounts/<pk>/` | `api:accounts:user-detail` | User API detail/update/delete | JWT authenticated owner |
+| GET, POST | `/api/books/` | `api:catalog:books-list` | Book API list/create; optional `search` query param | Public |
+| GET, PUT, PATCH, DELETE | `/api/books/<pk>/` | `api:catalog:books-detail` | Book API detail/update/delete | Public |
+| GET, POST | `/api/categories/` | `api:catalog:categories-list` | Category API list/create | Public |
+| GET, PUT, PATCH, DELETE | `/api/categories/<pk>/` | `api:catalog:categories-detail` | Category API detail/update/delete | Public |
+| POST | `/api/token/` | `api:token_obtain_pair` | Obtain JWT access/refresh token pair | Public |
 | GET | `/en/` | `index` | Home page | Public |
 | GET | `/en/book/` | `book:list` | Paginated book catalog; optional `search` query param | Public |
 | GET | `/en/book/<pk>/` | `book:detail` | Book detail page | Public |
@@ -94,13 +101,13 @@ language prefix is part of the path, for example `/en/book/`.
 | GET, POST | `/en/book/cart/` | `book:cart_view` | Show cart and submit checkout data | Authenticated |
 | GET | `/en/book/payment/success` | `book:payment_success` | Stripe success redirect; accepts `order_id` and `session_id` query params | Public callback |
 | GET | `/en/book/payment/cancel` | `book:payment_cancel` | Stripe cancel redirect | Public callback |
-| GET, POST | `/en/auth/register/` | `accounts:register` | Register a new user | Public |
-| GET, POST | `/en/auth/login/` | `accounts:login` | Login view | Public |
-| POST | `/en/auth/logout/` | `accounts:logout` | Logout view | Authenticated |
-| GET | `/en/orders/` | `orders:list` | Paginated order list; optional `search` query param | Authenticated user with `orders.view_order` |
+| GET, POST | `/en/auth/register/` | `auth:register` | Register a new user | Public |
+| GET, POST | `/en/auth/login/` | `auth:login` | Login view | Public |
+| POST | `/en/auth/logout/` | `auth:logout` | Logout view | Authenticated |
+| GET | `/en/orders/` | `order:list` | Paginated order list; optional `search` query param | Authenticated user with `orders.view_order` |
 | GET | `/en/admin/` | `admin:index` | Django admin | Staff/superuser |
-| GET | `/en/__debug__/` | debug toolbar | Debug toolbar routes when `DEBUG=True` | Development only |
-| GET | `/en/silk/` | silk | Silk profiling routes when `DEBUG=True` | Development only |
+| GET | `/__debug__/` | debug toolbar | Debug toolbar routes when `DEBUG=True` | Development only |
+| GET | `/silk/` | silk | Silk profiling routes when `DEBUG=True` | Development only |
 
 ## Test Coverage
 

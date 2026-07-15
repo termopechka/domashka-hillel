@@ -1,5 +1,6 @@
 from django.urls import path
-from .views import BooksListView, BookDetailView, AddBookView, add_to_cart, remove_from_cart, clear_cart, CheckoutView, payment_success, payment_cancel
+from .views import BooksListView, BookDetailView, AddBookView, add_to_cart, remove_from_cart, clear_cart, CheckoutView, \
+    payment_success, payment_cancel
 
 app_name = 'book'
 

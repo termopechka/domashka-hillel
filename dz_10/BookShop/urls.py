@@ -18,24 +18,37 @@ from django.conf import settings
 from django.conf.urls.i18n import i18n_patterns
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from rest_framework_simplejwt.views import TokenObtainPairView
 
-from books.urls import urlpatterns
 from .views import IndexView
 
-app_name = 'bookshop'
+api_urlpatterns = [
+    path('accounts/', include(('accounts.api', 'accounts'), namespace='accounts')),
+    path('orders/', include(('orders.api', 'orders'), namespace='orders')),
+    path('', include(('books.api', 'catalog'), namespace='catalog')),
+    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+]
+
+web_urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('book/', include('books.urls')),
+    path('auth/', include('accounts.urls')),
+    path('orders/', include('orders.urls')),
+    path('', IndexView.as_view(), name='index'),
+]
 
 urlpatterns = [
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/docs/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    path('api/', include((api_urlpatterns, 'api'), namespace='api')),
     path('i18n/', include('django.conf.urls.i18n')),
 ]
 
 urlpatterns += i18n_patterns(
-    path('admin/', admin.site.urls),
-    path('book/', include('books.urls', namespace='book')),
-    path('auth/', include('accounts.urls', namespace='accounts')),
-    path('orders/', include('orders.urls', namespace='orders')),
-    path('', IndexView.as_view(), name='index'),
-
+    *web_urlpatterns,
 )
 
 

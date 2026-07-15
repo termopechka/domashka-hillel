@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.mail import send_mail
@@ -12,14 +11,93 @@ from django.urls import reverse_lazy, reverse
 from django.views import View
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, DetailView, CreateView
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.response import Response
 from silk.profiling.profiler import silk_profile
 from orders.models import OrderItem, Order
 from .forms import CheckoutForm
-from .models import Book
+from .models import Book, Category
 import stripe
+from .serializer import BookSerializer, CategorySerializer
 
 logger = logging.getLogger(__name__)
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
+
+
+class BooksViewSet(viewsets.ModelViewSet):
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+    pagination_class = LimitOffsetPagination
+
+    @silk_profile(name='Book List View')
+    def list(self, request, *args, **kwargs):
+        logger.info('User %s requested a list of books.', request.user.get_username())
+        return super().list(request, *args, **kwargs)
+
+    def get_queryset(self):
+        result = self.queryset.select_related('category')
+        query = self.request.GET.get('search')
+        if query:
+            result = result.filter(Q(title__icontains=query) | Q(description__icontains=query))
+        return result
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['search_query'] = self.request.GET.get('search', '')
+        return context
+
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    pagination_class = LimitOffsetPagination
+
+
+class CartViewSet(viewsets.ViewSet):
+    def list(self, request):
+        cart = request.session.get('cart', {})
+        return Response({'cart': cart}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def add(self, request, pk=None):
+        pk_str = str(pk)
+        cart = request.session.get('cart', {})
+
+        cart[pk_str] = cart.get(pk_str, 0) + 1
+        request.session['cart'] = cart
+        request.session.modified = True
+
+        return Response({
+            'message': f'Book {pk} added to cart.',
+            'cart': cart
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def remove(self, request, pk=None):
+        pk_str = str(pk)
+        cart = request.session.get('cart', {})
+
+        if pk_str in cart:
+            del cart[pk_str]
+            request.session['cart'] = cart
+            request.session.modified = True
+            return Response({
+                'message': f'Book {pk} removed from cart.',
+                'cart': cart
+            }, status=status.HTTP_200_OK)
+
+        return Response({'error': 'Book not found in cart.'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=False, methods=['post'])
+    def clear(self, request):
+        cart = request.session.get('cart', {})
+        cart.clear()
+        request.session['cart'] = cart
+        request.session.modified = True
+
+        return Response({'message': 'Cart cleared.', 'cart': cart}, status=status.HTTP_200_OK)
 
 
 class BooksListView(ListView):
@@ -142,13 +220,13 @@ class AddBookView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
 
     Permissions:
         Requires authentication and ``books.add_book`` permission. Anonymous
-        users are redirected to ``/login/``.
+        users are redirected to the ``auth:login`` route.
     """
 
     model = Book
     permission_required = 'books.add_book'
     fields = ['title', 'author', 'price', 'description', 'stock', 'category']
-    login_url = '/login/'
+    login_url = reverse_lazy('auth:login')
     raise_exception = True
     template_name = 'books/form_book.html'
 
@@ -291,10 +369,10 @@ class CheckoutView(LoginRequiredMixin, View):
 
     Permissions:
         Requires authentication. Anonymous users are redirected to the
-        ``accounts:login`` route.
+        ``auth:login`` route.
     """
 
-    login_url = reverse_lazy('accounts:login')
+    login_url = reverse_lazy('auth:login')
 
     def get_cart_books(self):
         cart = self.request.session.get('cart', {})

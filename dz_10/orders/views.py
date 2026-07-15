@@ -1,8 +1,35 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db.models import Q
+from django.urls import reverse_lazy
 from django.views.generic import ListView
+from rest_framework import viewsets, permissions
+from rest_framework.pagination import LimitOffsetPagination
 
 from orders.models import Order
+from orders.serializer import OrderSerializer
+
+
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    pagination_class = LimitOffsetPagination
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        result = self.queryset.select_related('user')
+        query = self.request.GET.get('search')
+        if query:
+            result = result.filter(
+                Q(user__username__icontains=query)
+                | Q(user__email__icontains=query)
+                | Q(status__icontains=query)
+            )
+        return result
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['search_query'] = self.request.GET.get('search', '')
+        return context
 
 
 class OrderListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -33,14 +60,14 @@ class OrderListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     Permissions:
         Requires authentication and ``orders.view_order`` permission. Anonymous
-        users are redirected to ``/login/``.
+        users are redirected to the ``auth:login`` route.
     """
 
     model = Order
     template_name = 'orders.html'
     context_object_name = 'orders'
     permission_required = 'orders.view_order'
-    login_url = '/login/'
+    login_url = reverse_lazy('auth:login')
     paginate_by = 20
     raise_exception = True
 
