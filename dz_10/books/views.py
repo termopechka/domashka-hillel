@@ -1,9 +1,7 @@
-import asyncio
 import logging
 import os
-from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.core.mail import send_mail
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import redirect, render
@@ -11,13 +9,17 @@ from django.urls import reverse_lazy, reverse
 from django.views import View
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, DetailView, CreateView
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from silk.profiling.profiler import silk_profile
 from orders.models import OrderItem, Order
+from .cache import BOOK_CACHE_TIMEOUT, get_book_cache_key
 from .forms import CheckoutForm
+from .tasks import send_async_email
 from .models import Book, Category
 import stripe
 from .serializer import BookSerializer, CategorySerializer
@@ -31,6 +33,9 @@ class BooksViewSet(viewsets.ModelViewSet):
     serializer_class = BookSerializer
     pagination_class = LimitOffsetPagination
 
+    @method_decorator(
+        cache_page(BOOK_CACHE_TIMEOUT, cache="views", key_prefix="books-api-list")
+    )
     @silk_profile(name='Book List View')
     def list(self, request, *args, **kwargs):
         logger.info('User %s requested a list of books.', request.user.get_username())
@@ -184,6 +189,21 @@ class BookDetailView(DetailView):
     context_object_name = 'book'
     template_name = 'books/book.html'
     queryset = Book.objects.select_related('category')
+
+    def get_object(self, queryset=None):
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        cache_key = get_book_cache_key(pk)
+
+        # Try to get the object from the cache
+        obj = cache.get(cache_key)
+
+        if obj is None:
+            # Fall back to the standard database query
+            obj = super().get_object(queryset)
+            # Store the object in cache for 15 minutes (900 seconds)
+            cache.set(cache_key, obj, BOOK_CACHE_TIMEOUT)
+
+        return obj
 
 
 class AddBookView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
@@ -496,13 +516,10 @@ async def payment_success(request):
             message = f'Спасибо за покупку, {user.username}!\nСумма оплаты: {order.total_price} евро.'
             recipient_list = [user.email]
 
-            await asyncio.to_thread(
-                send_mail,
+            send_async_email.delay(
                 subject=subject,
                 message=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=recipient_list,
-                fail_silently=False,
+                recipient_list=recipient_list
             )
 
     return redirect('index')

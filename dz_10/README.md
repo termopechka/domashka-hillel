@@ -10,6 +10,9 @@ administrative/order views.
 - Django 6.0
 - PostgreSQL 15 for Docker/runtime configuration
 - Redis for Django cache/session storage in Docker/runtime configuration
+- Celery and Celery Beat with Redis broker/result backend
+- Gunicorn behind NGINX, with NGINX serving static and media files
+- Optional Sentry error and performance monitoring
 - pytest, pytest-django, pytest-cov, coverage.py
 - factory_boy for test data
 
@@ -40,6 +43,10 @@ administrative/order views.
    DJANGO_REDIS_NAME=0
    REDIS_PASSWORD=your-redis-password
    REDIS_PORT=6379
+   ALLOWED_HOSTS=localhost,127.0.0.1
+   SENTRY_DSN=
+   SENTRY_ENVIRONMENT=development
+   SENTRY_TRACES_SAMPLE_RATE=0.1
    STRIPE_PUBLIC_KEY=your-stripe-public-key
    STRIPE_SECRET_KEY=your-stripe-secret-key
    ```
@@ -48,17 +55,22 @@ administrative/order views.
 
 ### Docker
 
-Start PostgreSQL, Redis, and the Django ASGI app:
+Start PostgreSQL, Redis, Gunicorn, both Celery services, and NGINX:
 
 ```bash
 docker compose up --build
 ```
 
-The app is exposed on:
+NGINX exposes the app on:
 
 ```text
-http://localhost:8000/
+http://localhost/
 ```
+
+Redis databases are separated by responsibility: broker `0`, application and
+template cache `1`, sessions `2`, view cache `3`, and Celery results `4`.
+Celery Beat generates a nightly CSV catalog report under `media/reports/` and
+runs Django's expired-session cleanup daily.
 
 ### Local Tests
 

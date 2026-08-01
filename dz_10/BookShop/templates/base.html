@@ -1,5 +1,6 @@
 {% load static %}
 {% load i18n %}
+{% load cache %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,111 +11,120 @@
 <body>
 <header>
     <nav class="navbar navbar-expand-lg bg-body-tertiary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">BookShop</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
-                    aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="{% url 'index' %}">{% translate 'Home' %}</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'book:list' %}">{% translate 'Books' %}</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'book:cart_view' %}">{% translate 'Cart' %}</a>
-                    </li>
-                    <li class="nav-item">
-                        {% if perms.order.add %}
-                            <a class="nav-link" href="{% url 'order:list' %}">{% translate 'Orders' %}</a>
-                        {% endif %}
-                    </li>
-                    <li class="nav-item">
-                        {% if perms.book.add %}
-                            <a class="nav-link" href="{% url 'book:add' %}">{% translate 'Add Book' %}</a>
-                        {% endif %}
-                    </li>
-                    <li class="nav-item mt-2 mb-2">
-                        <form action="{% url 'set_language' %}" method="POST" class="d-inline-flex gap-1 align-items-center">
-                           {% csrf_token %}
-                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">BookShop</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a class="nav-link active" aria-current="page"
+                               href="{% url 'index' %}">{% translate 'Home' %}</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'book:list' %}">{% translate 'Books' %}</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'book:cart_view' %}">{% translate 'Cart' %}</a>
+                        </li>
+                        <li class="nav-item">
+                            {% if perms.orders.view_order %}
+                                <a class="nav-link" href="{% url 'order:list' %}">{% translate 'Orders' %}</a>
+                            {% endif %}
+                        </li>
+                        <li class="nav-item">
+                            {% if perms.books.add_book %}
+                                <a class="nav-link" href="{% url 'book:add' %}">{% translate 'Add Book' %}</a>
+                            {% endif %}
+                        </li>
+                        <li class="nav-item mt-2 mb-2">
+                            <form action="{% url 'set_language' %}" method="POST"
+                                  class="d-inline-flex gap-1 align-items-center">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
 
-                             {% get_current_language as LANGUAGE_CODE %}
-                             {% get_available_languages as LANGUAGES %}
+                                {% get_current_language as LANGUAGE_CODE %}
+                                {% get_available_languages as LANGUAGES %}
 
-                        {% for lang_code, lang_name in LANGUAGES %}
-                                <button type="submit" name="language" value="{{ lang_code }}"
-                                        class="btn btn-link nav-link p-0 px-1 {% if lang_code == LANGUAGE_CODE %}fw-bold text-dark{% endif %}"
-                                        style="text-decoration: none;">
-                                            {{ lang_name }}
-                                </button>
-                                {% if not forloop.last %}<span class="text-black-50">/</span>{% endif %}
-                            {% endfor %}
-                        </form>
-                    </li>
-                </ul>
+                                {% for lang_code, lang_name in LANGUAGES %}
+                                    <button type="submit" name="language" value="{{ lang_code }}"
+                                            class="btn btn-link nav-link p-0 px-1 {% if lang_code == LANGUAGE_CODE %}fw-bold text-dark{% endif %}"
+                                            style="text-decoration: none;">
+                                        {{ lang_name }}
+                                    </button>
+                                    {% if not forloop.last %}<span class="text-black-50">/</span>{% endif %}
+                                {% endfor %}
+                            </form>
+                        </li>
+                    </ul>
 
-                <div class="ms-auto">
-                    {% if user.is_authenticated %}
-                        <span class="navbar-text text-black-50 me-3 fw-semibold">
+                    <div class="ms-auto">
+                        {% if user.is_authenticated %}
+                            <span class="navbar-text text-black-50 me-3 fw-semibold">
                             {{ user.username }}
                         </span>
-                        <form action="{% url 'auth:logout' %}" method="post" class="d-inline me-2">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-outline-danger btn-sm">{% translate 'Log Out' %}</button>
-                        </form>
-                    {% else %}
-                        <a href="{% url 'auth:login' %}" class="btn btn-primary-dark btn-sm me-2">{% translate 'Sign In' %}</a>
-                        <a href="{% url 'auth:register' %}" class="btn btn-primary btn-sm me-2">{% translate 'Sign Up' %}</a>
-                    {% endif %}
-                </div>
+                            <form action="{% url 'auth:logout' %}" method="post" class="d-inline me-2">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="btn btn-outline-danger btn-sm">{% translate 'Log Out' %}</button>
+                            </form>
+                        {% else %}
+                            <a href="{% url 'auth:login' %}"
+                               class="btn btn-primary-dark btn-sm me-2">{% translate 'Sign In' %}</a>
+                            <a href="{% url 'auth:register' %}"
+                               class="btn btn-primary btn-sm me-2">{% translate 'Sign Up' %}</a>
+                        {% endif %}
+                    </div>
 
-                <form class="d-flex" role="search" method="GET">
-                    <input class="form-control me-2" type="search" name="search" placeholder="{% translate 'Search...' %}"
-                           value="{{ search_query }}" aria-label="{% translate 'Search' %}"/>
-                    <button class="btn btn-outline-success" type="submit">{% translate 'Search' %}</button>
-                </form>
+                    <form class="d-flex" role="search" method="GET">
+                        <input class="form-control me-2" type="search" name="search"
+                               placeholder="{% translate 'Search...' %}"
+                               value="{{ search_query }}" aria-label="{% translate 'Search' %}"/>
+                        <button class="btn btn-outline-success" type="submit">{% translate 'Search' %}</button>
+                    </form>
+                </div>
             </div>
-        </div>
     </nav>
 </header>
 <main>
     {% block main %} {% endblock %}
 </main>
-<footer class="footer p-5">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-3">
-                <h2>BookShop</h2>
+{% get_current_language as LANGUAGE_CODE %}
+{% cache 900 footer LANGUAGE_CODE %}
+    <footer class="footer p-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-3">
+                    <h2>BookShop</h2>
+                </div>
+                <div class="col-md-3">
+                    <h5>{% translate 'About Us' %}</h5>
+                    <p>
+                        {% blocktranslate %}
+                            Bookstore is a platform where you can enjoy books,
+                            read, and explore history.
+                        {% endblocktranslate %}
+                    </p>
+                </div>
+                <div class="col-md-3">
+                    <h5>{% translate 'Contact Us' %}</h5>
+                    <ul class="list-unstyled">
+                        <li>{% translate 'Email' %}: info@example.com</li>
+                    </ul>
+                </div>
             </div>
-            <div class="col-md-3">
-                <h5>{% translate 'About Us' %}</h5>
-                <p>
-                    {% blocktranslate %}
-                        Bookstore is a platform where you can enjoy books,
-                        read, and explore history.
-                    {% endblocktranslate %}
-                </p>
-            </div>
-            <div class="col-md-3">
-                <h5>{% translate 'Contact Us' %}</h5>
-                <ul class="list-unstyled">
-                    <li>{% translate 'Email' %}: info@example.com</li>
-                </ul>
+            <hr>
+            <div class="row">
+                <div class="col-md-6">
+                    <p>&copy; 2026 BookShop Website. All rights reserved.</p>
+                </div>
             </div>
         </div>
-        <hr>
-        <div class="row">
-            <div class="col-md-6">
-                <p>&copy; 2026 BookShop Website. All rights reserved.</p>
-            </div>
-        </div>
-    </div>
-</footer>
+    </footer>
+{% endcache %}
 <script src="{% static 'js/bootstrap.js' %}"></script>
 </body>
 </html>

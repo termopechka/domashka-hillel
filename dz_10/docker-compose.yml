@@ -1,11 +1,9 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15
+    restart: unless-stopped
     volumes:
-      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:z
-      - postgres_data:/var/lib/postgresql/data:z
+      - postgres_data:/var/lib/postgresql/data
     env_file:
       - ./.env
     environment:
@@ -22,6 +20,7 @@ services:
 
   redis:
     image: redis:latest
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
@@ -40,12 +39,33 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    # command: uvicorn BookShop.asgi:application --host 0.0.0.0 --port 8000
-    command: python manage.py runserver 0.0.0.0:8000
+    restart: unless-stopped
+    command: gunicorn BookShop.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 60
     volumes:
       - .:/app:z
-    ports:
-      - "8000:8000"
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    env_file:
+      - ./.env
+    environment:
+      RUN_DJANGO_SETUP: '1'
+    expose:
+      - '8000'
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: celery -A BookShop worker --loglevel=info --concurrency=2
+    volumes:
+      - .:/app:z
+      - media_volume:/app/media
     env_file:
       - ./.env
     depends_on:
@@ -54,6 +74,35 @@ services:
       redis:
         condition: service_healthy
 
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: celery -A BookShop beat --loglevel=info --schedule=/tmp/celerybeat-schedule
+    volumes:
+      - .:/app:z
+    env_file:
+      - ./.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  nginx:
+    build: ./nginx
+    restart: unless-stopped
+    ports:
+      - '80:80'
+    volumes:
+      - static_volume:/app/staticfiles:ro
+      - media_volume:/app/media:ro
+    depends_on:
+      - web
+
 volumes:
   postgres_data:
   redis_store:
+  static_volume:
+  media_volume:

@@ -1,5 +1,13 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load i18n %}
+{% load cache %}
 {% block title %} {% translate 'Index' %} {% endblock %}
-{% block main %} <h1 class="justify-content-center align-content-center text-center me-3">{% blocktranslate %} Welcome to BookShop! {% endblocktranslate %}</h1> {% endblock %}
+{% block main %}
+    {% get_current_language as LANGUAGE_CODE %}
+    {% cache 900 welcome_screen LANGUAGE_CODE %}
+        <h1 class="justify-content-center align-content-center text-center me-3">
+            {% blocktranslate %} Welcome to BookShop! {% endblocktranslate %}
+        </h1>
+    {% endcache %}
+{% endblock %}

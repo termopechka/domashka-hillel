@@ -12,8 +12,9 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 from pathlib import Path
-from django.conf.global_settings import STATICFILES_DIRS, AUTH_USER_MODEL, LOGIN_REDIRECT_URL, LOGOUT_REDIRECT_URL, \
-    SESSION_ENGINE
+from urllib.parse import quote
+
+from celery.schedules import crontab
 from django.utils.translation import gettext_lazy as _
 
 # Проверяем, запущен ли Django внутри контейнера Docker
@@ -26,12 +27,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'development-only-secret-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False').lower() in {'1', 'true', 'yes', 'on'}
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get(
+        'ALLOWED_HOSTS',
+        'localhost,127.0.0.1,[::1],testserver',
+    ).split(',')
+    if host.strip()
+]
 
 # Application definition
 
@@ -112,11 +120,48 @@ DATABASES = {
     }
 }
 
+REDIS_HOST = os.environ.get('REDIS_HOST', 'redis' if IS_IN_DOCKER else '127.0.0.1')
+REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
+REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', '')
+REDIS_AUTH = f":{quote(REDIS_PASSWORD, safe='')}@" if REDIS_PASSWORD else ''
+REDIS_URL = f"redis://{REDIS_AUTH}{REDIS_HOST}:{REDIS_PORT}"
+
+CELERY_BROKER_URL = f"{REDIS_URL}/0"
+CELERY_RESULT_BACKEND = f"{REDIS_URL}/4"
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_TIMEZONE = 'UTC'
+CELERY_BEAT_SCHEDULE = {
+    'generate-nightly-books-report': {
+        'task': 'books.tasks.generate_books_report',
+        'schedule': crontab(hour=2, minute=0),
+    },
+    'clear-expired-sessions-daily': {
+        'task': 'books.tasks.clear_expired_sessions',
+        'schedule': crontab(hour=3, minute=0),
+    },
+}
+
 CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": f"redis://:{os.environ.get('REDIS_PASSWORD')}@redis:{os.environ.get('REDIS_PORT')}/{os.environ.get('DJANGO_REDIS_NAME')}"
-    }
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f'{REDIS_URL}/1',
+        'OPTIONS': {'CLIENT_CLASS': 'django_redis.client.DefaultClient'},
+        'KEY_PREFIX': 'bookshop',
+    },
+    'sessions': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f'{REDIS_URL}/2',
+        'OPTIONS': {'CLIENT_CLASS': 'django_redis.client.DefaultClient'},
+        'KEY_PREFIX': 'bookshop-session',
+    },
+    'views': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f'{REDIS_URL}/3',
+        'OPTIONS': {'CLIENT_CLASS': 'django_redis.client.DefaultClient'},
+        'KEY_PREFIX': 'bookshop-view',
+    },
 }
 
 REST_FRAMEWORK = {
@@ -176,7 +221,7 @@ AUTH_USER_MODEL = 'accounts.User'
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
 # LOGIN_URL = "accounts:login"
 
@@ -189,10 +234,10 @@ LANGUAGE_CODE = 'en'
 
 LOCALE_PATHS = [BASE_DIR / 'locale']
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
+    BASE_DIR / 'static',
 ]
 
 LOGGING = {
@@ -232,8 +277,8 @@ CRISPY_TEMPLATE_PACK = 'bootstrap5'
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-SESSION_CACHE_ALIAS = 'default'
-SESSION_SAVE_EVERY_REQUEST = True
+SESSION_CACHE_ALIAS = 'sessions'
+
 
 CORS_ALLOW_ALL_ORIGINS = True
 
@@ -244,3 +289,23 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "your_email@yandex.ru"
 EMAIL_HOST_PASSWORD = ""
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration(), CeleryIntegration()],
+        environment=os.environ.get('SENTRY_ENVIRONMENT', 'development'),
+        traces_sample_rate=float(os.environ.get('SENTRY_TRACES_SAMPLE_RATE', '0.1')),
+        send_default_pii=False,
+    )
