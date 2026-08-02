@@ -1,2 +1,5 @@
 /dz_10/.env
 /dz_10/postgres_data/
+/dz_10/staticfiles/
+.idea
+.coverage
