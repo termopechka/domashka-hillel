@@ -6,53 +6,59 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('books', '0003_book_description_en_book_description_uk_and_more'),
+        ("books", "0003_book_description_en_book_description_uk_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='book',
-            name='author',
-            field=models.CharField(max_length=100, verbose_name='Author'),
+            model_name="book",
+            name="author",
+            field=models.CharField(max_length=100, verbose_name="Author"),
         ),
         migrations.AlterField(
-            model_name='book',
-            name='description',
-            field=models.TextField(verbose_name='Description'),
+            model_name="book",
+            name="description",
+            field=models.TextField(verbose_name="Description"),
         ),
         migrations.AlterField(
-            model_name='book',
-            name='description_en',
-            field=models.TextField(null=True, verbose_name='Description'),
+            model_name="book",
+            name="description_en",
+            field=models.TextField(null=True, verbose_name="Description"),
         ),
         migrations.AlterField(
-            model_name='book',
-            name='description_uk',
-            field=models.TextField(null=True, verbose_name='Description'),
+            model_name="book",
+            name="description_uk",
+            field=models.TextField(null=True, verbose_name="Description"),
         ),
         migrations.AlterField(
-            model_name='book',
-            name='price',
-            field=models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True, verbose_name='Price'),
+            model_name="book",
+            name="price",
+            field=models.DecimalField(
+                blank=True,
+                decimal_places=2,
+                max_digits=10,
+                null=True,
+                verbose_name="Price",
+            ),
         ),
         migrations.AlterField(
-            model_name='book',
-            name='stock',
-            field=models.IntegerField(default=0, verbose_name='Stock'),
+            model_name="book",
+            name="stock",
+            field=models.IntegerField(default=0, verbose_name="Stock"),
         ),
         migrations.AlterField(
-            model_name='book',
-            name='title',
-            field=models.CharField(max_length=100, verbose_name='Title'),
+            model_name="book",
+            name="title",
+            field=models.CharField(max_length=100, verbose_name="Title"),
         ),
         migrations.AlterField(
-            model_name='book',
-            name='title_en',
-            field=models.CharField(max_length=100, null=True, verbose_name='Title'),
+            model_name="book",
+            name="title_en",
+            field=models.CharField(max_length=100, null=True, verbose_name="Title"),
         ),
         migrations.AlterField(
-            model_name='book',
-            name='title_uk',
-            field=models.CharField(max_length=100, null=True, verbose_name='Title'),
+            model_name="book",
+            name="title_uk",
+            field=models.CharField(max_length=100, null=True, verbose_name="Title"),
         ),
     ]

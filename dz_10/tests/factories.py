@@ -1,5 +1,5 @@
 import factory
-from factory import fuzzy
+from factory import fuzzy  # noqa: F401
 from django.contrib.auth import get_user_model
 from books.models import Book, Category
 from orders.models import Order, OrderItem

@@ -2,25 +2,25 @@ import pytest
 from datetime import timedelta
 from django.utils import timezone
 from accounts.models import User
-from books.models import Book, Category
+from books.models import Book
 
 
 @pytest.mark.django_db
 def test_user_string_representation(user_factory):
-    user = user_factory(email='bruce_joe@example.com')
-    assert str(user) == 'bruce_joe@example.com'
+    user = user_factory(email="bruce_joe@example.com")
+    assert str(user) == "bruce_joe@example.com"
 
 
 @pytest.mark.django_db
 def test_category_string_representation(category_factory):
-    category = category_factory(name='Drama')
-    assert str(category) == 'Drama'
+    category = category_factory(name="Drama")
+    assert str(category) == "Drama"
 
 
 @pytest.mark.django_db
 def test_book_string_representation(book_factory):
-    book = book_factory(title='1984', author='George Orwell')
-    assert str(book) == '1984 by George Orwell'
+    book = book_factory(title="1984", author="George Orwell")
+    assert str(book) == "1984 by George Orwell"
 
 
 @pytest.mark.django_db
@@ -52,12 +52,12 @@ def test_book_meta_ordering_by_id(book_factory):
 
 @pytest.mark.django_db
 def test_book_category_relationship_foreign_key(category_factory, book_factory):
-    category = category_factory(name='Sci-Fi')
-    book1 = book_factory(title='1984', category=category)
-    book2 = book_factory(title='Linux from Scratch', category=category)
+    category = category_factory(name="Sci-Fi")
+    book1 = book_factory(title="1984", category=category)
+    book2 = book_factory(title="Linux from Scratch", category=category)
 
     assert book1.category == category
-    assert book1.category.name == 'Sci-Fi'
+    assert book1.category.name == "Sci-Fi"
 
     category_books = category.books.all()
 

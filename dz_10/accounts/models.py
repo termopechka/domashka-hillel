@@ -8,11 +8,11 @@ class User(AbstractUser):
     native_name = models.CharField(max_length=150)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
 
-    USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = ['first_name', 'last_name']
+    USERNAME_FIELD = "username"
+    REQUIRED_FIELDS = ["first_name", "last_name"]
 
     class Meta:
-        ordering = ['-date_joined']
+        ordering = ["-date_joined"]
 
     def __str__(self):
-        return '{}'.format(self.email)
+        return "{}".format(self.email)

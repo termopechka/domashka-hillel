@@ -2,7 +2,6 @@ from django.conf import settings
 from django.core.cache import cache, caches
 from django.core.cache.utils import make_template_fragment_key
 
-
 BOOK_CACHE_TIMEOUT = 60 * 15
 BOOK_DETAIL_FRAGMENT_NAME = "book_detail"
 

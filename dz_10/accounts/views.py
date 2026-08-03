@@ -19,13 +19,12 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, IsOwnerOrReadOnly)
 
     def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
+        partial = kwargs.pop("partial", False)
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return Response(serializer.data)
-
 
 
 class RegisterView(generic.CreateView):
@@ -62,13 +61,13 @@ class RegisterView(generic.CreateView):
     """
 
     form_class = MyUserCreationForm
-    template_name = 'register.html'
-    success_url = reverse_lazy('auth:login')
+    template_name = "register.html"
+    success_url = reverse_lazy("auth:login")
 
-    @silk_profile(name='Register account')
+    @silk_profile(name="Register account")
     def get(self, request, *args, **kwargs):
         """Render the registration form and log already-authenticated users."""
         if request.user.is_authenticated:
-            logger.info('user %s is already logged in', request.user.username)
+            logger.info("user %s is already logged in", request.user.username)
 
         return super().get(request, *args, **kwargs)

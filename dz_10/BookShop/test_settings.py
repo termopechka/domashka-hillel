@@ -1,6 +1,5 @@
 from .settings import *
 
-
 SECRET_KEY = SECRET_KEY or "test-secret-key"
 
 DATABASES = {

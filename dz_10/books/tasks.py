@@ -38,14 +38,16 @@ def generate_books_report():
         writer = csv.writer(report_file)
         writer.writerow(["id", "title", "author", "price", "stock", "category"])
         for book in Book.objects.select_related("category").iterator():
-            writer.writerow([
-                book.pk,
-                book.title,
-                book.author,
-                book.price,
-                book.stock,
-                book.category.name if book.category else "",
-            ])
+            writer.writerow(
+                [
+                    book.pk,
+                    book.title,
+                    book.author,
+                    book.price,
+                    book.stock,
+                    book.category.name if book.category else "",
+                ]
+            )
 
     return str(report_path.relative_to(settings.MEDIA_ROOT))
 

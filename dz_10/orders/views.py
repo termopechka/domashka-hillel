@@ -16,8 +16,8 @@ class OrderViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        result = self.queryset.select_related('user')
-        query = self.request.GET.get('search')
+        result = self.queryset.select_related("user")
+        query = self.request.GET.get("search")
         if query:
             result = result.filter(
                 Q(user__username__icontains=query)
@@ -28,7 +28,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context['search_query'] = self.request.GET.get('search', '')
+        context["search_query"] = self.request.GET.get("search", "")
         return context
 
 
@@ -64,16 +64,16 @@ class OrderListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     """
 
     model = Order
-    template_name = 'orders.html'
-    context_object_name = 'orders'
-    permission_required = 'orders.view_order'
-    login_url = reverse_lazy('auth:login')
+    template_name = "orders.html"
+    context_object_name = "orders"
+    permission_required = "orders.view_order"
+    login_url = reverse_lazy("auth:login")
     paginate_by = 20
     raise_exception = True
 
     def get_queryset(self):
-        result = super().get_queryset().select_related('user')
-        query = self.request.GET.get('search')
+        result = super().get_queryset().select_related("user")
+        query = self.request.GET.get("search")
         if query:
             result = result.filter(
                 Q(user__username__icontains=query)
@@ -84,5 +84,5 @@ class OrderListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['search_query'] = self.request.GET.get('search', '')
+        context["search_query"] = self.request.GET.get("search", "")
         return context

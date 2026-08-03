@@ -36,21 +36,23 @@ class BooksViewSet(viewsets.ModelViewSet):
     @method_decorator(
         cache_page(BOOK_CACHE_TIMEOUT, cache="views", key_prefix="books-api-list")
     )
-    @silk_profile(name='Book List View')
+    @silk_profile(name="Book List View")
     def list(self, request, *args, **kwargs):
-        logger.info('User %s requested a list of books.', request.user.get_username())
+        logger.info("User %s requested a list of books.", request.user.get_username())
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
-        result = self.queryset.select_related('category')
-        query = self.request.GET.get('search')
+        result = self.queryset.select_related("category")
+        query = self.request.GET.get("search")
         if query:
-            result = result.filter(Q(title__icontains=query) | Q(description__icontains=query))
+            result = result.filter(
+                Q(title__icontains=query) | Q(description__icontains=query)
+            )
         return result
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context['search_query'] = self.request.GET.get('search', '')
+        context["search_query"] = self.request.GET.get("search", "")
         return context
 
 
@@ -62,47 +64,51 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 class CartViewSet(viewsets.ViewSet):
     def list(self, request):
-        cart = request.session.get('cart', {})
-        return Response({'cart': cart}, status=status.HTTP_200_OK)
+        cart = request.session.get("cart", {})
+        return Response({"cart": cart}, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=["post"])
     def add(self, request, pk=None):
         pk_str = str(pk)
-        cart = request.session.get('cart', {})
+        cart = request.session.get("cart", {})
 
         cart[pk_str] = cart.get(pk_str, 0) + 1
-        request.session['cart'] = cart
+        request.session["cart"] = cart
         request.session.modified = True
 
-        return Response({
-            'message': f'Book {pk} added to cart.',
-            'cart': cart
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {"message": f"Book {pk} added to cart.", "cart": cart},
+            status=status.HTTP_200_OK,
+        )
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=["post"])
     def remove(self, request, pk=None):
         pk_str = str(pk)
-        cart = request.session.get('cart', {})
+        cart = request.session.get("cart", {})
 
         if pk_str in cart:
             del cart[pk_str]
-            request.session['cart'] = cart
+            request.session["cart"] = cart
             request.session.modified = True
-            return Response({
-                'message': f'Book {pk} removed from cart.',
-                'cart': cart
-            }, status=status.HTTP_200_OK)
+            return Response(
+                {"message": f"Book {pk} removed from cart.", "cart": cart},
+                status=status.HTTP_200_OK,
+            )
 
-        return Response({'error': 'Book not found in cart.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"error": "Book not found in cart."}, status=status.HTTP_404_NOT_FOUND
+        )
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=["post"])
     def clear(self, request):
-        cart = request.session.get('cart', {})
+        cart = request.session.get("cart", {})
         cart.clear()
-        request.session['cart'] = cart
+        request.session["cart"] = cart
         request.session.modified = True
 
-        return Response({'message': 'Cart cleared.', 'cart': cart}, status=status.HTTP_200_OK)
+        return Response(
+            {"message": "Cart cleared.", "cart": cart}, status=status.HTTP_200_OK
+        )
 
 
 class BooksListView(ListView):
@@ -135,26 +141,28 @@ class BooksListView(ListView):
     """
 
     model = Book
-    context_object_name = 'books'
-    template_name = 'books/books.html'
+    context_object_name = "books"
+    template_name = "books/books.html"
     paginate_by = 8
 
-    @silk_profile(name='Book List View')
+    @silk_profile(name="Book List View")
     def get(self, request, *args, **kwargs):
-        logger.info('User %s requested a list of books.', request.user.get_username())
+        logger.info("User %s requested a list of books.", request.user.get_username())
 
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        result = super().get_queryset().select_related('category')
-        query = self.request.GET.get('search')
+        result = super().get_queryset().select_related("category")
+        query = self.request.GET.get("search")
         if query:
-            result = result.filter(Q(title__icontains=query) | Q(description__icontains=query))
+            result = result.filter(
+                Q(title__icontains=query) | Q(description__icontains=query)
+            )
         return result
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['search_query'] = self.request.GET.get('search', '')
+        context["search_query"] = self.request.GET.get("search", "")
         return context
 
 
@@ -186,9 +194,9 @@ class BookDetailView(DetailView):
     """
 
     model = Book
-    context_object_name = 'book'
-    template_name = 'books/book.html'
-    queryset = Book.objects.select_related('category')
+    context_object_name = "book"
+    template_name = "books/book.html"
+    queryset = Book.objects.select_related("category")
 
     def get_object(self, queryset=None):
         pk = self.kwargs.get(self.pk_url_kwarg)
@@ -244,11 +252,11 @@ class AddBookView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
 
     model = Book
-    permission_required = 'books.add_book'
-    fields = ['title', 'author', 'price', 'description', 'stock', 'category']
-    login_url = reverse_lazy('auth:login')
+    permission_required = "books.add_book"
+    fields = ["title", "author", "price", "description", "stock", "category"]
+    login_url = reverse_lazy("auth:login")
     raise_exception = True
-    template_name = 'books/form_book.html'
+    template_name = "books/form_book.html"
 
 
 def add_to_cart(request, pk):
@@ -279,11 +287,11 @@ def add_to_cart(request, pk):
     """
 
     pk_str = str(pk)
-    cart = request.session.get('cart', {})
+    cart = request.session.get("cart", {})
     cart[pk_str] = cart.get(pk_str, 0) + 1
-    request.session['cart'] = cart
+    request.session["cart"] = cart
     request.session.modified = True
-    return redirect('index')
+    return redirect("index")
 
 
 @require_POST
@@ -315,14 +323,14 @@ def remove_from_cart(request, pk):
         Public endpoint. Authentication is not required.
     """
 
-    cart = request.session.get('cart', {})
+    cart = request.session.get("cart", {})
     pk = str(pk)
     if pk in cart:
         del cart[pk]
-        request.session['cart'] = cart
+        request.session["cart"] = cart
         request.session.modified = True
 
-    return redirect('index')
+    return redirect("index")
 
 
 def clear_cart(request):
@@ -350,10 +358,10 @@ def clear_cart(request):
         Public endpoint. Authentication is not required.
     """
 
-    cart = request.session.get('cart', {})
+    cart = request.session.get("cart", {})
     cart.clear()
-    request.session['cart'] = cart
-    return redirect('index')
+    request.session["cart"] = cart
+    return redirect("index")
 
 
 class CheckoutView(LoginRequiredMixin, View):
@@ -392,11 +400,11 @@ class CheckoutView(LoginRequiredMixin, View):
         ``auth:login`` route.
     """
 
-    login_url = reverse_lazy('auth:login')
+    login_url = reverse_lazy("auth:login")
 
     def get_cart_books(self):
-        cart = self.request.session.get('cart', {})
-        books = list(Book.objects.filter(pk__in=cart.keys()).select_related('category'))
+        cart = self.request.session.get("cart", {})
+        books = list(Book.objects.filter(pk__in=cart.keys()).select_related("category"))
 
         for book in books:
             book.quantity = cart.get(str(book.pk), cart.get(book.pk, 0))
@@ -406,7 +414,7 @@ class CheckoutView(LoginRequiredMixin, View):
     def get(self, request):
         _, books = self.get_cart_books()
 
-        return render(request, 'cart.html', {'cart_obj': books, 'form': CheckoutForm()})
+        return render(request, "cart.html", {"cart_obj": books, "form": CheckoutForm()})
 
     def post(self, request):
         cart, books = self.get_cart_books()
@@ -426,44 +434,55 @@ class CheckoutView(LoginRequiredMixin, View):
                 line_items = []
                 for book in books:
                     price = book.price or 0
-                    order_items.append(OrderItem(
-                        book=book,
-                        book_name=book.title,
-                        order=user_order_details,
-                        price=price,
-                        quantity=book.quantity,
-                    ))
+                    order_items.append(
+                        OrderItem(
+                            book=book,
+                            book_name=book.title,
+                            order=user_order_details,
+                            price=price,
+                            quantity=book.quantity,
+                        )
+                    )
 
-                    line_items.append({
-                        'price_data': {
-                            'currency': 'eur',
-                            'product_data': {
-                                'name': book.title,
+                    line_items.append(
+                        {
+                            "price_data": {
+                                "currency": "eur",
+                                "product_data": {
+                                    "name": book.title,
+                                },
+                                "unit_amount": int(price * 100),
                             },
-                            'unit_amount': int(price * 100),
-                        },
-                        'quantity': book.quantity,
-                    })
+                            "quantity": book.quantity,
+                        }
+                    )
 
                 OrderItem.objects.bulk_create(order_items)
 
                 checkout_session = stripe.checkout.Session.create(
-                    payment_method_types=['card'],
+                    payment_method_types=["card"],
                     line_items=line_items,
-                    mode='payment',
-                    success_url=request.build_absolute_uri(reverse('book:payment_success')) + f"?session_id={{CHECKOUT_SESSION_ID}}&order_id={user_order_details.id}",
-                    cancel_url=request.build_absolute_uri(reverse('book:payment_cancel')),
-                    metadata={'order_id': user_order_details.id},
+                    mode="payment",
+                    success_url=request.build_absolute_uri(
+                        reverse("book:payment_success")
+                    )
+                    + f"?session_id={{CHECKOUT_SESSION_ID}}&order_id={user_order_details.id}",  # noqa: E501
+                    cancel_url=request.build_absolute_uri(
+                        reverse("book:payment_cancel")
+                    ),
+                    metadata={"order_id": user_order_details.id},
                 )
 
-                request.session['cart'] = {}
+                request.session["cart"] = {}
                 request.session.modified = True
 
                 return redirect(checkout_session.url, code=303)
 
         # return redirect('index')
 
-        return render(request, 'cart.html', {'cart_obj': books, 'form': user_order_details})
+        return render(
+            request, "cart.html", {"cart_obj": books, "form": user_order_details}
+        )
 
 
 async def payment_success(request):
@@ -497,32 +516,32 @@ async def payment_success(request):
         confirmation email when an order is updated.
     """
 
-    order_id = request.GET.get('order_id')
+    order_id = request.GET.get("order_id")
 
     if order_id:
         try:
             order = await Order.objects.aget(id=order_id)
         except (Order.DoesNotExist, ValueError, TypeError):
-            logger.warning('Payment success callback received invalid order_id=%s', order_id)
-            return redirect('index')
+            logger.warning(
+                "Payment success callback received invalid order_id=%s", order_id
+            )
+            return redirect("index")
 
-        if not getattr(order, 'is_paid', False):
+        if not getattr(order, "is_paid", False):
             order.is_paid = True
             await order.asave()
 
             user = await request.auser()
 
-            subject = f'Заказ №{order.id} успешно оплачен!'
-            message = f'Спасибо за покупку, {user.username}!\nСумма оплаты: {order.total_price} евро.'
+            subject = f"Заказ №{order.id} успешно оплачен!"
+            message = f"Спасибо за покупку, {user.username}!\nСумма оплаты: {order.total_price} евро."  # noqa: E501
             recipient_list = [user.email]
 
             send_async_email.delay(
-                subject=subject,
-                message=message,
-                recipient_list=recipient_list
+                subject=subject, message=message, recipient_list=recipient_list
             )
 
-    return redirect('index')
+    return redirect("index")
 
 
 async def payment_cancel(request):
@@ -550,4 +569,4 @@ async def payment_cancel(request):
         Public callback endpoint. Authentication is not required.
     """
 
-    return redirect('index')
+    return redirect("index")

@@ -3,7 +3,6 @@ from decimal import Decimal
 import pytest
 from django.core.exceptions import ValidationError
 
-from books.models import Book
 from orders.models import Order, OrderItem
 
 
@@ -46,13 +45,18 @@ def test_order_allows_nullable_user_and_keeps_string_readable(order_factory):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("field,value", [
-    ("shipping_address", ""),
-    ("city", ""),
-    ("postal_code", ""),
-    ("country", ""),
-])
-def test_order_required_shipping_fields_reject_blank_values(order_factory, field, value):
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("shipping_address", ""),
+        ("city", ""),
+        ("postal_code", ""),
+        ("country", ""),
+    ],
+)
+def test_order_required_shipping_fields_reject_blank_values(
+    order_factory, field, value
+):
     # Generated with AI, reviewed and modified
     order = order_factory.build(**{field: value})
 

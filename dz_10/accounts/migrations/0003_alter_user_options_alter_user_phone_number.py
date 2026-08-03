@@ -6,17 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0002_alter_user_native_name_alter_user_phone_number'),
+        ("accounts", "0002_alter_user_native_name_alter_user_phone_number"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='user',
-            options={'ordering': ['-date_joined']},
+            name="user",
+            options={"ordering": ["-date_joined"]},
         ),
         migrations.AlterField(
-            model_name='user',
-            name='phone_number',
+            model_name="user",
+            name="phone_number",
             field=models.CharField(blank=True, max_length=20, null=True),
         ),
     ]

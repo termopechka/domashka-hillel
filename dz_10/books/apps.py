@@ -2,7 +2,7 @@ from django.apps import AppConfig
 
 
 class BooksConfig(AppConfig):
-    name = 'books'
+    name = "books"
 
     def ready(self):
-        import books.signals
+        import books.signals  # noqa: F401

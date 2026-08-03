@@ -42,8 +42,12 @@ def test_book_detail_fragment_is_scoped_to_book(web_client, book_factory):
     first_book = book_factory(title="First cached book")
     second_book = book_factory(title="Second cached book")
 
-    first_response = web_client.get(reverse("book:detail", kwargs={"pk": first_book.pk}))
-    second_response = web_client.get(reverse("book:detail", kwargs={"pk": second_book.pk}))
+    first_response = web_client.get(
+        reverse("book:detail", kwargs={"pk": first_book.pk})
+    )
+    second_response = web_client.get(
+        reverse("book:detail", kwargs={"pk": second_book.pk})
+    )
 
     assert first_book.title in first_response.content.decode()
     assert second_book.title in second_response.content.decode()
@@ -51,7 +55,9 @@ def test_book_detail_fragment_is_scoped_to_book(web_client, book_factory):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_book_api_view_cache_is_invalidated_when_catalog_changes(api_client, book_factory):
+def test_book_api_view_cache_is_invalidated_when_catalog_changes(
+    api_client, book_factory
+):
     caches["views"].clear()
     first_book = book_factory(title="Initially cached book")
     list_url = reverse("api:catalog:books-list")

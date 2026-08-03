@@ -26,4 +26,4 @@ class IndexView(TemplateView):
         Public endpoint. Authentication is not required.
     """
 
-    template_name = 'index.html'
+    template_name = "index.html"
