@@ -33,7 +33,6 @@ services:
       --workers 2 --timeout 60
       --access-logfile - --error-logfile -'
     healthCheckPath: /health/
-    maxShutdownDelaySeconds: 60
     envVars:
       - fromGroup: bookshop-runtime
       - key: DATABASE_URL
