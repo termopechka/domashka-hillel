@@ -142,7 +142,7 @@ def test_delete_user_unauthenticated_user(api_client):
 def test_delete_not_existing_user_authenticated_user(api_auth_client, user_factory):
     user = user_factory(username="user1")
     api_auth_client.force_authenticate(user)
-    url = reverse("api:accounts:user-detail", kwargs={"pk": 2})
+    url = reverse("api:accounts:user-detail", kwargs={"pk": 99999})
 
     response = api_auth_client.delete(url, format="json")
 

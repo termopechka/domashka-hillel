@@ -37,8 +37,11 @@ jobs:
           flake8 .
 
       - name: Test with pytest
+        env:
+          DB_NAME: "django_test"
+          DB_PASSWORD: "test1234"
         run: | 
-          pytest .
+          pytest
           
   build-and-push:
     runs-on: ubuntu-latest

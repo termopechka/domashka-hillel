@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 from urllib.parse import quote
 
@@ -19,6 +20,12 @@ from django.utils.translation import gettext_lazy as _
 
 # Проверяем, запущен ли Django внутри контейнера Docker
 IS_IN_DOCKER = os.environ.get("DB_HOST") == "db"
+
+IS_TESTING = (
+    "test" in sys.argv
+    or any("pytest" in arg for arg in sys.argv)
+    or os.getenv("PYTEST_CURRENT_TEST") is not None
+)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -309,3 +316,31 @@ if SENTRY_DSN:
         traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
         send_default_pii=False,
     )
+
+if IS_TESTING:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
+    }
+
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "test-default-cache",
+        },
+        "sessions": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "test-sessions-cache",
+        },
+        "views": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "test-views-cache",
+        },
+    }
+
+    SESSION_ENGINE = "django.contrib.sessions.backends.db"
+
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_BROKER_URL = "memory://"
