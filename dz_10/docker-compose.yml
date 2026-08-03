@@ -49,6 +49,7 @@ services:
       - ./.env
     environment:
       RUN_DJANGO_SETUP: '1'
+      DJANGO_SETTINGS_MODULE: BookShop.settings.production
     expose:
       - '8000'
     depends_on:
@@ -68,6 +69,8 @@ services:
       - media_volume:/app/media
     env_file:
       - ./.env
+    environment:
+      DJANGO_SETTINGS_MODULE: BookShop.settings.production
     depends_on:
       db:
         condition: service_healthy
@@ -84,6 +87,8 @@ services:
       - .:/app:z
     env_file:
       - ./.env
+    environment:
+      DJANGO_SETTINGS_MODULE: BookShop.settings.production
     depends_on:
       db:
         condition: service_healthy

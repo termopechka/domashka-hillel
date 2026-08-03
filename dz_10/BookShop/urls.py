@@ -31,7 +31,7 @@ from rest_framework_simplejwt.views import (
     TokenVerifyView,
 )
 
-from .views import IndexView
+from .views import IndexView, health_check
 
 api_urlpatterns = [
     path("accounts/", include(("accounts.api", "accounts"), namespace="accounts")),
@@ -51,6 +51,7 @@ web_urlpatterns = [
 ]
 
 urlpatterns = [
+    path("health/", health_check, name="health-check"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "api/docs/swagger/",
