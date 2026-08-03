@@ -1,9 +1,7 @@
 import logging
 from django.urls import reverse_lazy
 from django.views import generic
-from rest_framework import viewsets, status
-from rest_framework.exceptions import PermissionDenied
-from rest_framework.generics import get_object_or_404
+from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from silk.profiling.profiler import silk_profile
