@@ -11,12 +11,18 @@ envVarGroups:
         value: production
       - key: SENTRY_TRACES_SAMPLE_RATE
         value: "0.1"
+      - key: CELERY_TASK_ALWAYS_EAGER
+        value: "True"
+      - key: CELERY_TASK_EAGER_PROPAGATES
+        value: "False"
+      - key: EMAIL_BACKEND
+        value: django.core.mail.backends.console.EmailBackend
 
 services:
   - type: web
     name: bookshop-web
     runtime: image
-    plan: starter
+    plan: free
     region: frankfurt
     image:
       url: ghcr.io/termopechka/domashka-hillel:main
@@ -24,11 +30,11 @@ services:
         fromRegistryCreds:
           name: github-container-registry
     dockerCommand: >-
-      /bin/sh -c 'gunicorn BookShop.wsgi:application
+      /bin/sh -c 'python manage.py migrate --noinput &&
+      exec gunicorn BookShop.wsgi:application
       --bind 0.0.0.0:${PORT:-10000}
       --workers 2 --timeout 60
       --access-logfile - --error-logfile -'
-    preDeployCommand: python manage.py migrate --noinput
     healthCheckPath: /health/
     maxShutdownDelaySeconds: 60
     envVars:
@@ -49,86 +55,17 @@ services:
       - key: SENTRY_DSN
         sync: false
 
-  - type: worker
-    name: bookshop-celery
-    runtime: image
-    plan: starter
-    region: frankfurt
-    image:
-      url: ghcr.io/termopechka/domashka-hillel:main
-      creds:
-        fromRegistryCreds:
-          name: github-container-registry
-    dockerCommand: celery -A BookShop worker --loglevel=info --concurrency=2
-    disk:
-      name: bookshop-reports
-      mountPath: /app/media
-      sizeGB: 1
-    envVars:
-      - fromGroup: bookshop-runtime
-      - key: DATABASE_URL
-        fromDatabase:
-          name: bookshop-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: bookshop-redis
-          property: connectionString
-      - key: EMAIL_HOST
-        value: smtp.gmail.com
-      - key: EMAIL_PORT
-        value: "587"
-      - key: EMAIL_USE_TLS
-        value: "True"
-      - key: EMAIL_HOST_USER
-        sync: false
-      - key: EMAIL_HOST_PASSWORD
-        sync: false
-      - key: DEFAULT_FROM_EMAIL
-        sync: false
-      - key: SENTRY_DSN
-        sync: false
-
-  - type: worker
-    name: bookshop-celery-beat
-    runtime: image
-    plan: starter
-    region: frankfurt
-    image:
-      url: ghcr.io/termopechka/domashka-hillel:main
-      creds:
-        fromRegistryCreds:
-          name: github-container-registry
-    dockerCommand: >-
-      celery -A BookShop beat --loglevel=info
-      --schedule=/tmp/celerybeat-schedule
-    maxShutdownDelaySeconds: 60
-    envVars:
-      - fromGroup: bookshop-runtime
-      - key: DATABASE_URL
-        fromDatabase:
-          name: bookshop-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: bookshop-redis
-          property: connectionString
-      - key: SENTRY_DSN
-        sync: false
-
   - type: keyvalue
     name: bookshop-redis
-    plan: starter
+    plan: free
     region: frankfurt
     ipAllowList: []
     maxmemoryPolicy: noeviction
-    persistenceMode: journal-snapshot
+    persistenceMode: "off"
 
 databases:
   - name: bookshop-db
-    plan: basic-256mb
+    plan: free
     region: frankfurt
     postgresMajorVersion: "15"
     databaseName: bookshop

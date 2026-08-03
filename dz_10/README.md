@@ -78,21 +78,20 @@ The repository-root `render.yaml` deploys the prebuilt
 `ghcr.io/termopechka/domashka-hillel:main` image with the following production
 services:
 
-- Gunicorn web service with WhiteNoise static-file serving and `/health/`
+- Free Gunicorn web service with WhiteNoise static-file serving and `/health/`
   health checks.
-- Celery worker with a persistent `/app/media` disk for generated CSV reports.
-- Celery Beat scheduler.
-- Render Postgres 15 and a private Render Key Value instance.
+- Free Render Postgres 15 and a private Free Render Key Value instance.
 
-The Blueprint uses paid production plans: three Starter services, a Starter
-Key Value instance, and a Basic Postgres instance. Adjust the `plan` fields in
-`render.yaml` before applying the Blueprint if a different cost/reliability
-tradeoff is required.
+This is a card-free demo configuration. Render does not offer free background
+workers, cron jobs, persistent disks, or pre-deploy commands. Celery therefore
+runs tasks eagerly in the web process, email uses Django's console backend, and
+database migrations run when the web container starts. The nightly report and
+expired-session Beat jobs run only in the full local Docker Compose setup.
 
 The existing `.github/workflows/django.yml` pipeline runs linting and tests for
 pull requests. After a successful push to `main`, it builds one `linux/amd64`
 image, publishes `main`, `latest`, and an immutable commit-SHA tag to GHCR, and
-sends the exact image digest to the deploy hooks for all three Render services.
+sends the exact image digest to the Render web service deploy hook.
 
 #### First deployment
 
@@ -105,42 +104,32 @@ sends the exact image digest to the deploy hooks for all three Render services.
    Alternatively, make the GHCR package public and remove each `creds` block
    from `render.yaml`.
 3. In Render, create a Blueprint and select the repository-root `render.yaml`.
-   Supply the prompted Stripe, SMTP, and optional Sentry values. Render
-   generates `SECRET_KEY` and injects internal `DATABASE_URL` and `REDIS_URL`
-   values automatically.
-4. Copy the deploy hook from the **Settings** page of each Render service into
-   these GitHub Actions secrets:
+   Supply the prompted Stripe and optional Sentry values. Render generates
+   `SECRET_KEY` and injects internal `DATABASE_URL` and `REDIS_URL` values
+   automatically.
+4. Copy the deploy hook from the web service's **Settings** page into this
+   GitHub Actions secret:
 
    - `RENDER_WEB_DEPLOY_HOOK_URL`
-   - `RENDER_CELERY_DEPLOY_HOOK_URL`
-   - `RENDER_BEAT_DEPLOY_HOOK_URL`
 
 5. Create the GitHub Actions repository variable
    `RENDER_DEPLOY_ENABLED=true`. Optionally protect deployments by configuring
    required reviewers on the GitHub `production` environment used by the job.
-6. Run **BookShop CI and deploy** manually from the Actions tab, or push another
+6. Run **Django CI and deploy** manually from the Actions tab, or push another
    change to `main`. The workflow publishes the image and triggers Render.
-   Database migrations run as the web service's pre-deploy command; static
-   assets are already collected in the image.
-7. Create an administrator from the Render web service shell:
-
-```bash
-python manage.py createsuperuser
-```
+   Database migrations run before Gunicorn starts; static assets are already
+   collected in the image.
 
 For later deployments, merge or push to `main`. A pull request only runs the
 test job and never publishes or deploys. Render image-backed services do not
 watch GHCR for updated tags, so the deploy hooks are required. Keep old
 commit-SHA images in GHCR if you want Render rollbacks to remain available.
 
-If these Render services were already created with `runtime: docker`, recreate
-them as image-backed services before applying this version of the Blueprint;
-Render service runtimes cannot be changed in place.
-
-Render filesystems are ephemeral unless a disk is attached. The report disk is
-attached only to the Celery worker because Render does not support sharing one
-disk between services. Use object storage if reports later need to be served
-by the web application.
+Free web services spin down after inactivity and have an ephemeral filesystem.
+Free Key Value data can disappear on restart, which logs users out and clears
+caches. Free Postgres expires after 30 days and has no backups. This setup is
+appropriate for demonstrations, not production. Use object storage for uploads
+and generated reports that must persist.
 
 Keep real credentials only in the ignored local `.env`, GitHub Actions secrets,
 and the Render Dashboard. Do not upload `.env` to GitHub Actions or bake it into

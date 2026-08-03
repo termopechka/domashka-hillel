@@ -134,6 +134,10 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
 CELERY_TIMEZONE = "UTC"
+CELERY_TASK_ALWAYS_EAGER = env_bool("CELERY_TASK_ALWAYS_EAGER", default=False)
+CELERY_TASK_EAGER_PROPAGATES = env_bool(
+    "CELERY_TASK_EAGER_PROPAGATES", default=False
+)
 CELERY_BEAT_SCHEDULE = {
     "generate-nightly-books-report": {
         "task": "books.tasks.generate_books_report",

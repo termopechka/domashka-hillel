@@ -119,8 +119,6 @@ jobs:
         env:
           IMAGE_DIGEST: ${{ needs.build-and-push.outputs.digest }}
           RENDER_WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_WEB_DEPLOY_HOOK_URL }}
-          RENDER_CELERY_DEPLOY_HOOK_URL: ${{ secrets.RENDER_CELERY_DEPLOY_HOOK_URL }}
-          RENDER_BEAT_DEPLOY_HOOK_URL: ${{ secrets.RENDER_BEAT_DEPLOY_HOOK_URL }}
         run: |
           set -eu
 
@@ -145,5 +143,3 @@ jobs:
           }
 
           trigger_deploy "bookshop-web" "${RENDER_WEB_DEPLOY_HOOK_URL}"
-          trigger_deploy "bookshop-celery" "${RENDER_CELERY_DEPLOY_HOOK_URL}"
-          trigger_deploy "bookshop-celery-beat" "${RENDER_BEAT_DEPLOY_HOOK_URL}"
