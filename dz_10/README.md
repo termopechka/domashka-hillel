@@ -98,11 +98,9 @@ sends the exact image digest to the Render web service deploy hook.
 1. Push the repository to GitHub. The first successful workflow run publishes
    the GHCR image; deployment remains disabled until the repository variable
    described below is set.
-2. In Render, open **Workspace Settings > Container Registry Credentials** and
-   add a GitHub credential named `github-container-registry`. Use GitHub user
-   `termopechka` and a classic personal access token with `read:packages`.
-   Alternatively, make the GHCR package public and remove each `creds` block
-   from `render.yaml`.
+2. Keep the `ghcr.io/termopechka/domashka-hillel` package public in its GitHub
+   package settings. The Blueprint intentionally omits registry credentials so
+   Render can pull this public image without a GitHub token.
 3. In Render, create a Blueprint and select the repository-root `render.yaml`.
    Supply the prompted Stripe and optional Sentry values. Render generates
    `SECRET_KEY` and injects internal `DATABASE_URL` and `REDIS_URL` values

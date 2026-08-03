@@ -26,9 +26,6 @@ services:
     region: frankfurt
     image:
       url: ghcr.io/termopechka/domashka-hillel:main
-      creds:
-        fromRegistryCreds:
-          name: github-container-registry
     dockerCommand: >-
       /bin/sh -c 'python manage.py migrate --noinput &&
       exec gunicorn BookShop.wsgi:application
