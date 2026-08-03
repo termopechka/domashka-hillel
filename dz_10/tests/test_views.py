@@ -13,6 +13,14 @@ def test_health_check(web_client):
 
 
 @pytest.mark.django_db
+def test_register_page_links_to_login(web_client):
+    response = web_client.get(reverse("auth:register"))
+
+    assert response.status_code == 200
+    assert f'href="{reverse("auth:login")}"' in response.content.decode()
+
+
+@pytest.mark.django_db
 def test_book_list_view_status_code(web_client):
     url = reverse("book:list")
     response = web_client.get(url)

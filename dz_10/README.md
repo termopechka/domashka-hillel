@@ -1,5 +1,8 @@
 # BookShop
 
+[![Build status](https://github.com/termopechka/domashka-hillel/actions/workflows/django.yml/badge.svg?branch=main)](https://github.com/termopechka/domashka-hillel/actions/workflows/django.yml)
+[![Coverage](https://img.shields.io/badge/coverage-92%25-brightgreen)](#test-coverage)
+
 BookShop is a Django-based bookstore project with user registration, a book
 catalog, session cart, order checkout, Stripe payment redirect flow, and
 administrative/order views.
