@@ -1,4 +1,10 @@
+from django.http import JsonResponse
 from django.views.generic import TemplateView
+
+
+def health_check(request):
+    """Return a lightweight liveness response for the hosting platform."""
+    return JsonResponse({"status": "ok"})
 
 
 class IndexView(TemplateView):

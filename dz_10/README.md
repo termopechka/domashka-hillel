@@ -45,7 +45,7 @@ administrative/order views.
    REDIS_PORT=6379
    ALLOWED_HOSTS=localhost,127.0.0.1
    SENTRY_DSN=
-   SENTRY_ENVIRONMENT=development
+   SENTRY_ENVIRONMENT=production
    SENTRY_TRACES_SAMPLE_RATE=0.1
    STRIPE_PUBLIC_KEY=your-stripe-public-key
    STRIPE_SECRET_KEY=your-stripe-secret-key
@@ -72,10 +72,95 @@ template cache `1`, sessions `2`, view cache `3`, and Celery results `4`.
 Celery Beat generates a nightly CSV catalog report under `media/reports/` and
 runs Django's expired-session cleanup daily.
 
+### Render with GitHub Actions and GHCR
+
+The repository-root `render.yaml` deploys the prebuilt
+`ghcr.io/termopechka/domashka-hillel:main` image with the following production
+services:
+
+- Gunicorn web service with WhiteNoise static-file serving and `/health/`
+  health checks.
+- Celery worker with a persistent `/app/media` disk for generated CSV reports.
+- Celery Beat scheduler.
+- Render Postgres 15 and a private Render Key Value instance.
+
+The Blueprint uses paid production plans: three Starter services, a Starter
+Key Value instance, and a Basic Postgres instance. Adjust the `plan` fields in
+`render.yaml` before applying the Blueprint if a different cost/reliability
+tradeoff is required.
+
+The existing `.github/workflows/django.yml` pipeline runs linting and tests for
+pull requests. After a successful push to `main`, it builds one `linux/amd64`
+image, publishes `main`, `latest`, and an immutable commit-SHA tag to GHCR, and
+sends the exact image digest to the deploy hooks for all three Render services.
+
+#### First deployment
+
+1. Push the repository to GitHub. The first successful workflow run publishes
+   the GHCR image; deployment remains disabled until the repository variable
+   described below is set.
+2. In Render, open **Workspace Settings > Container Registry Credentials** and
+   add a GitHub credential named `github-container-registry`. Use GitHub user
+   `termopechka` and a classic personal access token with `read:packages`.
+   Alternatively, make the GHCR package public and remove each `creds` block
+   from `render.yaml`.
+3. In Render, create a Blueprint and select the repository-root `render.yaml`.
+   Supply the prompted Stripe, SMTP, and optional Sentry values. Render
+   generates `SECRET_KEY` and injects internal `DATABASE_URL` and `REDIS_URL`
+   values automatically.
+4. Copy the deploy hook from the **Settings** page of each Render service into
+   these GitHub Actions secrets:
+
+   - `RENDER_WEB_DEPLOY_HOOK_URL`
+   - `RENDER_CELERY_DEPLOY_HOOK_URL`
+   - `RENDER_BEAT_DEPLOY_HOOK_URL`
+
+5. Create the GitHub Actions repository variable
+   `RENDER_DEPLOY_ENABLED=true`. Optionally protect deployments by configuring
+   required reviewers on the GitHub `production` environment used by the job.
+6. Run **BookShop CI and deploy** manually from the Actions tab, or push another
+   change to `main`. The workflow publishes the image and triggers Render.
+   Database migrations run as the web service's pre-deploy command; static
+   assets are already collected in the image.
+7. Create an administrator from the Render web service shell:
+
+```bash
+python manage.py createsuperuser
+```
+
+For later deployments, merge or push to `main`. A pull request only runs the
+test job and never publishes or deploys. Render image-backed services do not
+watch GHCR for updated tags, so the deploy hooks are required. Keep old
+commit-SHA images in GHCR if you want Render rollbacks to remain available.
+
+If these Render services were already created with `runtime: docker`, recreate
+them as image-backed services before applying this version of the Blueprint;
+Render service runtimes cannot be changed in place.
+
+Render filesystems are ephemeral unless a disk is attached. The report disk is
+attached only to the Celery worker because Render does not support sharing one
+disk between services. Use object storage if reports later need to be served
+by the web application.
+
+Keep real credentials only in the ignored local `.env`, GitHub Actions secrets,
+and the Render Dashboard. Do not upload `.env` to GitHub Actions or bake it into
+the image. Use `.env.example` as the local template, and rotate any credential
+that has ever been pasted into chat, logs, source control, or another shared
+location.
+
 ### Local Tests
 
-The default settings module reads PostgreSQL and Redis values from environment
-variables. For local tests without Docker, use the test settings module:
+Settings are split by environment:
+
+- `BookShop.settings.base` contains shared application, database, cache, and
+  Celery configuration.
+- `BookShop.settings.development` is the default for `manage.py` and enables
+  developer middleware and permissive local CORS.
+- `BookShop.settings.production` is used by Docker, Gunicorn, ASGI, and Celery;
+  it requires `SECRET_KEY` and `ALLOWED_HOSTS`.
+- `BookShop.test_settings` uses SQLite and local-memory caches for tests.
+
+For local tests without Docker, run:
 
 ```bash
 pytest --ds=BookShop.test_settings -o addopts=''

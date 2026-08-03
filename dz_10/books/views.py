@@ -11,18 +11,19 @@ from django.views.decorators.http import require_POST
 from django.views.generic import ListView, DetailView, CreateView
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
-from silk.profiling.profiler import silk_profile
+from BookShop.profiling import silk_profile
 from orders.models import OrderItem, Order
 from .cache import BOOK_CACHE_TIMEOUT, get_book_cache_key
 from .forms import CheckoutForm
 from .tasks import send_async_email
 from .models import Book, Category
 import stripe
-from .serializer import BookSerializer, CategorySerializer
+from .serializer import BookSerializer, CartSerializer, CategorySerializer
 
 logger = logging.getLogger(__name__)
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
@@ -63,10 +64,17 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 class CartViewSet(viewsets.ViewSet):
+    serializer_class = CartSerializer
+
     def list(self, request):
         cart = request.session.get("cart", {})
         return Response({"cart": cart}, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("id", OpenApiTypes.INT, OpenApiParameter.PATH)
+        ]
+    )
     @action(detail=True, methods=["post"])
     def add(self, request, pk=None):
         pk_str = str(pk)
@@ -81,6 +89,11 @@ class CartViewSet(viewsets.ViewSet):
             status=status.HTTP_200_OK,
         )
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("id", OpenApiTypes.INT, OpenApiParameter.PATH)
+        ]
+    )
     @action(detail=True, methods=["post"])
     def remove(self, request, pk=None):
         pk_str = str(pk)

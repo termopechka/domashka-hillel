@@ -5,6 +5,13 @@ from django.test import Client
 from django.urls import reverse
 
 
+def test_health_check(web_client):
+    response = web_client.get(reverse("health-check"))
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 @pytest.mark.django_db
 def test_book_list_view_status_code(web_client):
     url = reverse("book:list")

@@ -4,7 +4,7 @@ from django.views import generic
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from silk.profiling.profiler import silk_profile
+from BookShop.profiling import silk_profile
 from .forms import MyUserCreationForm
 from .models import User
 from .permissions import IsOwnerOrReadOnly

@@ -1,11 +1,13 @@
-from .settings import *
+from .settings.base import *  # noqa: F401,F403
 
-SECRET_KEY = SECRET_KEY or "test-secret-key"
+SECRET_KEY = "test-secret-key-not-for-production-32-bytes"
+DEBUG = False
+ALLOWED_HOSTS = ["testserver"]
 
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "test.sqlite3",
+        "NAME": ":memory:",
     }
 }
 

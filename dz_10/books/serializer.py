@@ -12,3 +12,9 @@ class BookSerializer(serializers.ModelSerializer):
     class Meta:
         model = Book
         fields = "__all__"
+
+
+class CartSerializer(serializers.Serializer):
+    cart = serializers.DictField(child=serializers.IntegerField(min_value=1))
+    message = serializers.CharField(required=False)
+    error = serializers.CharField(required=False)
