@@ -60,7 +60,6 @@ services:
         fromRegistryCreds:
           name: github-container-registry
     dockerCommand: celery -A BookShop worker --loglevel=info --concurrency=2
-    maxShutdownDelaySeconds: 120
     disk:
       name: bookshop-reports
       mountPath: /app/media
