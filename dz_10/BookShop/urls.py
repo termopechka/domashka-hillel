@@ -46,6 +46,10 @@ web_urlpatterns = [
     path("admin/", admin.site.urls),
     path("book/", include("books.urls")),
     path("auth/", include("accounts.urls")),
+    path(
+        "auth/",
+        include(("accounts.urls", "auth"), namespace="accounts"),
+    ),
     path("orders/", include("orders.urls")),
     path("", IndexView.as_view(), name="index"),
 ]

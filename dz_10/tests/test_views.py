@@ -20,6 +20,10 @@ def test_register_page_links_to_login(web_client):
     assert f'href="{reverse("auth:login")}"' in response.content.decode()
 
 
+def test_accounts_namespace_is_a_backward_compatible_auth_alias():
+    assert reverse("accounts:login") == reverse("auth:login")
+
+
 @pytest.mark.django_db
 def test_book_list_view_status_code(web_client):
     url = reverse("book:list")
