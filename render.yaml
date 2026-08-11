@@ -1,4 +1,9 @@
 envVarGroups:
+  - name: service-auth
+    envVars:
+      - key: WAREHOUSE_SERVICE_API_KEY
+        generateValue: true
+
   - name: bookshop-runtime
     envVars:
       - key: DJANGO_SETTINGS_MODULE
@@ -7,16 +12,33 @@ envVarGroups:
         generateValue: true
       - key: ALLOWED_HOSTS
         value: localhost
+      - key: WAREHOUSE_INTEGRATION_ENABLED
+        value: "True"
+      - key: WAREHOUSE_HTTP_RETRIES
+        value: "2"
       - key: SENTRY_ENVIRONMENT
         value: production
       - key: SENTRY_TRACES_SAMPLE_RATE
         value: "0.1"
       - key: CELERY_TASK_ALWAYS_EAGER
         value: "True"
-      - key: CELERY_TASK_EAGER_PROPAGATES
-        value: "False"
       - key: EMAIL_BACKEND
         value: django.core.mail.backends.console.EmailBackend
+
+  - name: warehouse-runtime
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: core.settings_production
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_ALLOWED_HOSTS
+        value: localhost
+      - key: SENTRY_ENVIRONMENT
+        value: production
+      - key: SENTRY_TRACES_SAMPLE_RATE
+        value: "0.1"
+      - key: CELERY_TASK_ALWAYS_EAGER
+        value: "True"
 
 services:
   - type: web
@@ -25,10 +47,16 @@ services:
     plan: free
     region: frankfurt
     image:
-      url: ghcr.io/termopechka/domashka-hillel:main
+      url: ghcr.io/termopechka/domashka-hillel-bookshop:main
     healthCheckPath: /health/
     envVars:
       - fromGroup: bookshop-runtime
+      - fromGroup: service-auth
+      - key: WAREHOUSE_HOSTPORT
+        fromService:
+          type: web
+          name: warehouse-api
+          property: hostport
       - key: RUN_DJANGO_SETUP
         value: "1"
       - key: PORT
@@ -46,11 +74,48 @@ services:
         sync: false
       - key: STRIPE_SECRET_KEY
         sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+
+  - type: web
+    name: warehouse-api
+    runtime: image
+    plan: free
+    region: frankfurt
+    image:
+      url: ghcr.io/termopechka/domashka-hillel-warehouse:main
+    healthCheckPath: /actuator/health
+    envVars:
+      - fromGroup: warehouse-runtime
+      - fromGroup: service-auth
+      - key: RUN_DJANGO_SETUP
+        value: "1"
+      - key: PORT
+        value: "5000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: warehouse-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: warehouse-redis
+          property: connectionString
       - key: SENTRY_DSN
         sync: false
 
   - type: keyvalue
     name: bookshop-redis
+    plan: free
+    region: frankfurt
+    ipAllowList: []
+    maxmemoryPolicy: noeviction
+    persistenceMode: "off"
+
+  - type: keyvalue
+    name: warehouse-redis
     plan: free
     region: frankfurt
     ipAllowList: []
@@ -64,4 +129,12 @@ databases:
     postgresMajorVersion: "15"
     databaseName: bookshop
     user: bookshop
+    ipAllowList: []
+
+  - name: warehouse-db
+    plan: free
+    region: frankfurt
+    postgresMajorVersion: "15"
+    databaseName: warehouse
+    user: warehouse
     ipAllowList: []

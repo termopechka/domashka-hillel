@@ -1,0 +1,16 @@
+.env
+.git
+.idea
+.pytest_cache
+.coverage
+coverage.xml
+htmlcov/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+db.sqlite3
+media/
+staticfiles/
+tests/
+AI_PROMPTS.md
+AI_REVIEW.md

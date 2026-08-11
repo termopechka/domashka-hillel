@@ -1,37 +1,57 @@
-name: Django CI and deploy
+name: Django services CI/CD
 
 on:
   pull_request:
     paths:
-      - "dz_10/**"
+      - "django_bookshop/**"
+      - "django_management/**"
+      - "deploy/**"
+      - "compose.production.yml"
       - ".github/workflows/django.yml"
       - "render.yaml"
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
-      - "dz_10/**"
+      - "django_bookshop/**"
+      - "django_management/**"
+      - "deploy/**"
+      - "compose.production.yml"
       - ".github/workflows/django.yml"
       - "render.yaml"
   workflow_dispatch:
 
 concurrency:
-  group: bookshop-production
-  cancel-in-progress: false
+  group: django-services-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  BOOKSHOP_IMAGE: ${{ github.repository }}-bookshop
+  WAREHOUSE_IMAGE: ${{ github.repository }}-warehouse
 
 jobs:
   test:
-    name: Lint and test application
+    name: Test ${{ matrix.service }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: bookshop
+            directory: django_bookshop
+            settings: BookShop.test_settings
+            wsgi: BookShop.wsgi:application
+          - service: warehouse
+            directory: django_management
+            settings: core.test_settings
+            wsgi: core.wsgi:application
     defaults:
       run:
-        working-directory: dz_10
+        working-directory: ${{ matrix.directory }}
+    env:
+      DJANGO_SETTINGS_MODULE: ${{ matrix.settings }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -41,32 +61,78 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: dz_10/requirements.txt
+          cache-dependency-path: ${{ matrix.directory }}/requirements.txt
 
       - name: Install dependencies
         run: python -m pip install --disable-pip-version-check -r requirements.txt flake8==7.3.0
 
-      - name: Lint with Flake8
+      - name: Lint Python
         run: flake8 .
 
-      - name: Run tests
+      - name: Run tests with required coverage
         run: pytest -q
 
       - name: Check for missing migrations
-        run: python manage.py makemigrations --check --dry-run --settings=BookShop.test_settings
+        run: python manage.py makemigrations --check --dry-run
 
-      - name: Run production deployment checks
+      - name: Validate OpenAPI schema
+        run: python manage.py spectacular --file /tmp/${{ matrix.service }}-schema.yml --validate
+
+      - name: Validate Gunicorn configuration
+        run: gunicorn --check-config --config gunicorn.conf.py ${{ matrix.wsgi }}
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.service }}
+          path: ${{ matrix.directory }}/coverage.xml
+
+      - name: Check BookShop production settings
+        if: matrix.service == 'bookshop'
         env:
-          SECRET_KEY: ci-only-secret-key-not-used-in-production
+          DJANGO_SETTINGS_MODULE: BookShop.settings.production
+          SECRET_KEY: ci-only-long-secret-key-not-used-in-production-123456789
           ALLOWED_HOSTS: localhost
           DATABASE_URL: postgresql://bookshop:bookshop@localhost:5432/bookshop
           REDIS_URL: redis://localhost:6379
-          SECURE_SSL_REDIRECT: "False"
-        run: python manage.py check --deploy --settings=BookShop.settings.production
+          SECURE_SSL_REDIRECT: "True"
+        run: python manage.py check --deploy
 
-  build-and-push:
-    name: Build and push Docker image
-    needs: test
+      - name: Check Warehouse production settings
+        if: matrix.service == 'warehouse'
+        env:
+          DJANGO_SETTINGS_MODULE: core.settings_production
+          DJANGO_SECRET_KEY: ci-only-long-secret-key-not-used-in-production-123456789
+          DJANGO_ALLOWED_HOSTS: localhost
+          WAREHOUSE_SERVICE_API_KEY: ci-only-service-key
+          DATABASE_URL: postgresql://warehouse:warehouse@localhost:5432/warehouse
+          REDIS_URL: redis://localhost:6379
+          SECURE_SSL_REDIRECT: "True"
+        run: python manage.py check --deploy
+
+  production-compose:
+    name: Validate production Compose
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      BOOKSHOP_ENV_FILE: deploy/bookshop.env.example
+      WAREHOUSE_ENV_FILE: deploy/warehouse.env.example
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate Compose model
+        run: docker compose -f compose.production.yml config --quiet
+      - name: Validate NGINX configuration
+        run: >-
+          docker run --rm
+          --add-host bookshop-web:127.0.0.1
+          --add-host warehouse-api:127.0.0.1
+          --volume "${GITHUB_WORKSPACE}/deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro"
+          nginx:1.29-alpine nginx -t
+
+  build-bookshop:
+    name: Publish BookShop image
+    needs: [test, production-compose]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -75,71 +141,100 @@ jobs:
     outputs:
       digest: ${{ steps.build.outputs.digest }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v4
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Docker image
+      - name: Build and push BookShop
         id: build
         uses: docker/build-push-action@v7
         with:
-          context: ./dz_10
-          file: ./dz_10/Dockerfile
+          context: django_bookshop
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.BOOKSHOP_IMAGE }}:main
+            ${{ env.REGISTRY }}/${{ env.BOOKSHOP_IMAGE }}:latest
+            ${{ env.REGISTRY }}/${{ env.BOOKSHOP_IMAGE }}:${{ github.sha }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=bookshop
+          cache-to: type=gha,mode=max,scope=bookshop
+
+  build-warehouse:
+    name: Publish Warehouse image
+    needs: [test, production-compose]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push Warehouse
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: django_management
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.WAREHOUSE_IMAGE }}:main
+            ${{ env.REGISTRY }}/${{ env.WAREHOUSE_IMAGE }}:latest
+            ${{ env.REGISTRY }}/${{ env.WAREHOUSE_IMAGE }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=warehouse
+          cache-to: type=gha,mode=max,scope=warehouse
 
   deploy:
-    name: Deploy image to Render
-    needs: build-and-push
+    name: Deploy both services to Render
+    needs: [build-bookshop, build-warehouse]
     if: vars.RENDER_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment: production
     permissions:
       contents: read
     steps:
-      - name: Trigger Render image deploys
+      - name: Deploy immutable image digests
         env:
-          IMAGE_DIGEST: ${{ needs.build-and-push.outputs.digest }}
-          RENDER_WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_WEB_DEPLOY_HOOK_URL }}
+          BOOKSHOP_DIGEST: ${{ needs.build-bookshop.outputs.digest }}
+          WAREHOUSE_DIGEST: ${{ needs.build-warehouse.outputs.digest }}
+          BOOKSHOP_HOOK: ${{ secrets.RENDER_BOOKSHOP_DEPLOY_HOOK_URL }}
+          WAREHOUSE_HOOK: ${{ secrets.RENDER_WAREHOUSE_DEPLOY_HOOK_URL }}
         run: |
           set -eu
-
-          image="${REGISTRY}/${IMAGE_NAME}@${IMAGE_DIGEST}"
-
           trigger_deploy() {
             service_name="$1"
-            deploy_hook="$2"
-
+            image="$2"
+            deploy_hook="$3"
             if [ -z "${deploy_hook}" ]; then
               echo "Missing deploy hook for ${service_name}" >&2
               exit 1
             fi
-
-            echo "Triggering ${service_name} with ${image}"
+            echo "Triggering ${service_name}"
             curl --fail-with-body --silent --show-error \
-              --request POST \
-              --get \
-              --data-urlencode "imgURL=${image}" \
+              --request POST --get --data-urlencode "imgURL=${image}" \
               "${deploy_hook}"
-            echo
           }
-
-          trigger_deploy "bookshop-web" "${RENDER_WEB_DEPLOY_HOOK_URL}"
+          trigger_deploy \
+            "bookshop-web" \
+            "${REGISTRY}/${BOOKSHOP_IMAGE}@${BOOKSHOP_DIGEST}" \
+            "${BOOKSHOP_HOOK}"
+          trigger_deploy \
+            "warehouse-api" \
+            "${REGISTRY}/${WAREHOUSE_IMAGE}@${WAREHOUSE_DIGEST}" \
+            "${WAREHOUSE_HOOK}"
