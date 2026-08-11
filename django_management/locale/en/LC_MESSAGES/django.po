@@ -1,0 +1,249 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-11 13:49+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+msgid "External ID"
+msgstr ""
+
+msgid "ISBN"
+msgstr ""
+
+msgid "Title"
+msgstr ""
+
+msgid "Author"
+msgstr ""
+
+msgid "Active"
+msgstr ""
+
+msgid "Book"
+msgstr ""
+
+msgid "Books"
+msgstr ""
+
+msgid "Synchronize a book from Bookshop"
+msgstr ""
+
+msgid "English"
+msgstr ""
+
+msgid "Ukrainian"
+msgstr ""
+
+msgid "Warehouse Management API"
+msgstr ""
+
+msgid "Book inventory, reservations, returns, and stock movements."
+msgstr ""
+
+msgid "Warehouse administration"
+msgstr ""
+
+msgid "Warehouse admin"
+msgstr ""
+
+msgid "Inventory management"
+msgstr ""
+
+msgid "Service health check"
+msgstr ""
+
+msgid "Available quantity"
+msgstr ""
+
+msgid "Quantity"
+msgstr ""
+
+msgid "Reserved quantity"
+msgstr ""
+
+msgid "Inventory"
+msgstr ""
+
+msgid "Stocktake correction"
+msgstr ""
+
+msgid "Data correction"
+msgstr ""
+
+msgid "Found stock"
+msgstr ""
+
+msgid "Receipt"
+msgstr ""
+
+msgid "Reservation"
+msgstr ""
+
+msgid "Reservation release"
+msgstr ""
+
+msgid "Sale"
+msgstr ""
+
+msgid "Return"
+msgstr ""
+
+msgid "Write-off"
+msgstr ""
+
+msgid "Adjustment"
+msgstr ""
+
+msgid "Damaged"
+msgstr ""
+
+msgid "Lost"
+msgstr ""
+
+msgid "Stolen"
+msgstr ""
+
+msgid "Defective"
+msgstr ""
+
+msgid "Obsolete"
+msgstr ""
+
+msgid "Other"
+msgstr ""
+
+msgid "Customer return"
+msgstr ""
+
+msgid "Damaged return"
+msgstr ""
+
+msgid "Wrong item"
+msgstr ""
+
+msgid "Movement type"
+msgstr ""
+
+msgid "Reason"
+msgstr ""
+
+msgid "Reference"
+msgstr ""
+
+msgid "Created at"
+msgstr ""
+
+msgid "Stock movement"
+msgstr ""
+
+msgid "Stock movements"
+msgstr ""
+
+msgid "Public ID"
+msgstr ""
+
+msgid "Order ID"
+msgstr ""
+
+msgid "Returns"
+msgstr ""
+
+msgid "Return item"
+msgstr ""
+
+msgid "Return items"
+msgstr ""
+
+msgid "Check book availability"
+msgstr ""
+
+msgid "Receive stock"
+msgstr ""
+
+msgid "Write off stock"
+msgstr ""
+
+msgid "Adjust stock quantity"
+msgstr ""
+
+msgid "Register a customer return"
+msgstr ""
+
+msgid "List stock movements"
+msgstr ""
+
+msgid "Pending"
+msgstr ""
+
+msgid "Confirmed"
+msgstr ""
+
+msgid "Cancelled"
+msgstr ""
+
+msgid "Expired"
+msgstr ""
+
+msgid "Payment failed"
+msgstr ""
+
+msgid "Order cancelled"
+msgstr ""
+
+msgid "Reservation expired"
+msgstr ""
+
+msgid "Manual cancellation"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Cancellation reason"
+msgstr ""
+
+msgid "Expires at"
+msgstr ""
+
+msgid "Updated at"
+msgstr ""
+
+msgid "Reservations"
+msgstr ""
+
+msgid "Reservation item"
+msgstr ""
+
+msgid "Reservation items"
+msgstr ""
+
+msgid "List reservations"
+msgstr ""
+
+msgid "Create a stock reservation"
+msgstr ""
+
+msgid "Confirm a paid reservation"
+msgstr ""
+
+msgid "Cancel a reservation"
+msgstr ""
+
+msgid "Contact"
+msgstr ""
+
+msgid "Phone number"
+msgstr ""

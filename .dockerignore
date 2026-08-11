@@ -1,0 +1,13 @@
+django_bookshop/.env
+.git
+.gitignore
+.idea
+.pytest_cache
+.coverage
+__pycache__/
+**/__pycache__/
+*.py[cod]
+htmlcov/
+media/
+postgres_data/
+staticfiles/

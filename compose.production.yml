@@ -1,0 +1,221 @@
+name: bookshop-platform
+
+x-bookshop-environment: &bookshop-environment
+  DJANGO_SETTINGS_MODULE: BookShop.settings.production
+  DB_HOST: bookshop-db
+  DB_PORT: '5432'
+  REDIS_HOST: bookshop-redis
+  REDIS_PORT: '6379'
+  WAREHOUSE_INTEGRATION_ENABLED: '1'
+  WAREHOUSE_BASE_URL: http://warehouse-api:5000/api/v1
+  RUN_DJANGO_SETUP: '0'
+
+x-warehouse-environment: &warehouse-environment
+  DJANGO_SETTINGS_MODULE: core.settings_production
+  POSTGRES_HOST: warehouse-db
+  POSTGRES_PORT: '5432'
+  REDIS_HOST: warehouse-redis
+  REDIS_PORT: '6379'
+  RUN_DJANGO_SETUP: '0'
+
+services:
+  bookshop-db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    env_file: ${BOOKSHOP_ENV_FILE:-deploy/bookshop.env}
+    volumes:
+      - bookshop-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  warehouse-db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    env_file: ${WAREHOUSE_ENV_FILE:-deploy/warehouse.env}
+    volumes:
+      - warehouse-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  bookshop-redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    env_file: ${BOOKSHOP_ENV_FILE:-deploy/bookshop.env}
+    command: sh -c 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"'
+    volumes:
+      - bookshop-redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  warehouse-redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    env_file: ${WAREHOUSE_ENV_FILE:-deploy/warehouse.env}
+    command: sh -c 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"'
+    volumes:
+      - warehouse-redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  warehouse-api:
+    image: ${WAREHOUSE_IMAGE:-warehouse-management:production}
+    build: django_management
+    restart: unless-stopped
+    init: true
+    env_file: ${WAREHOUSE_ENV_FILE:-deploy/warehouse.env}
+    environment:
+      <<: *warehouse-environment
+      RUN_DJANGO_SETUP: '1'
+    depends_on:
+      warehouse-db:
+        condition: service_healthy
+      warehouse-redis:
+        condition: service_healthy
+    expose:
+      - '5000'
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          request = urllib.request.Request(
+          'http://127.0.0.1:5000/actuator/health',
+          headers={'X-Forwarded-Proto': 'https'});
+          urllib.request.urlopen(request, timeout=3)
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    stop_grace_period: 30s
+
+  warehouse-celery:
+    image: ${WAREHOUSE_IMAGE:-warehouse-management:production}
+    build: django_management
+    restart: unless-stopped
+    init: true
+    command: celery -A core worker --loglevel=info --concurrency=2
+    env_file: ${WAREHOUSE_ENV_FILE:-deploy/warehouse.env}
+    environment: *warehouse-environment
+    depends_on:
+      warehouse-api:
+        condition: service_healthy
+    stop_grace_period: 30s
+
+  warehouse-beat:
+    image: ${WAREHOUSE_IMAGE:-warehouse-management:production}
+    build: django_management
+    restart: unless-stopped
+    init: true
+    command: celery -A core beat --loglevel=info --schedule=/tmp/celerybeat-schedule
+    env_file: ${WAREHOUSE_ENV_FILE:-deploy/warehouse.env}
+    environment: *warehouse-environment
+    depends_on:
+      warehouse-api:
+        condition: service_healthy
+    stop_grace_period: 30s
+
+  bookshop-web:
+    image: ${BOOKSHOP_IMAGE:-django-bookshop:production}
+    build: django_bookshop
+    restart: unless-stopped
+    init: true
+    env_file: ${BOOKSHOP_ENV_FILE:-deploy/bookshop.env}
+    environment:
+      <<: *bookshop-environment
+      RUN_DJANGO_SETUP: '1'
+    volumes:
+      - bookshop-media:/app/media
+    depends_on:
+      bookshop-db:
+        condition: service_healthy
+      bookshop-redis:
+        condition: service_healthy
+      warehouse-api:
+        condition: service_healthy
+    expose:
+      - '8000'
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          request = urllib.request.Request(
+          'http://127.0.0.1:8000/health/',
+          headers={'X-Forwarded-Proto': 'https'});
+          urllib.request.urlopen(request, timeout=3)
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    stop_grace_period: 30s
+
+  bookshop-celery:
+    image: ${BOOKSHOP_IMAGE:-django-bookshop:production}
+    build: django_bookshop
+    restart: unless-stopped
+    init: true
+    command: celery -A BookShop worker --loglevel=info --concurrency=2
+    env_file: ${BOOKSHOP_ENV_FILE:-deploy/bookshop.env}
+    environment: *bookshop-environment
+    volumes:
+      - bookshop-media:/app/media
+    depends_on:
+      bookshop-web:
+        condition: service_healthy
+    stop_grace_period: 30s
+
+  bookshop-beat:
+    image: ${BOOKSHOP_IMAGE:-django-bookshop:production}
+    build: django_bookshop
+    restart: unless-stopped
+    init: true
+    command: celery -A BookShop beat --loglevel=info --schedule=/tmp/celerybeat-schedule
+    env_file: ${BOOKSHOP_ENV_FILE:-deploy/bookshop.env}
+    environment: *bookshop-environment
+    depends_on:
+      bookshop-web:
+        condition: service_healthy
+    stop_grace_period: 30s
+
+  gateway:
+    image: nginx:1.29-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '8080:8080'
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - bookshop-media:/app/media:ro
+    depends_on:
+      bookshop-web:
+        condition: service_healthy
+      warehouse-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/nginx-health >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  bookshop-db-data:
+  warehouse-db-data:
+  bookshop-redis-data:
+  warehouse-redis-data:
+  bookshop-media:

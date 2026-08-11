@@ -1,0 +1,119 @@
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env
+    networks:
+      default:
+        aliases:
+          - management-db
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:latest
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_store:/data
+    env_file:
+      - .env
+    networks:
+      default:
+        aliases:
+          - management-redis
+    command: sh -c 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"'
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  celery:
+    image: django_management-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: celery -A core worker --loglevel=info --concurrency=2
+    volumes:
+      - .:/app:z
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings
+      RUN_DJANGO_SETUP: '0'
+    networks:
+      - default
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery-beat:
+    image: django_management-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: celery -A core beat --loglevel=info --schedule=/tmp/celerybeat-schedule
+    volumes:
+      - .:/app:z
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings
+      RUN_DJANGO_SETUP: '0'
+    networks:
+      - default
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  api:
+    image: django_management-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - .:/app:z
+    networks:
+      - default
+      - bookshop_network
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings
+      DJANGO_DEBUG: '1'
+      RUN_DJANGO_SETUP: '1'
+      WAREHOUSE_SERVICE_API_KEY: ${WAREHOUSE_SERVICE_API_KEY:-local-warehouse-key-change-in-production}
+    command: python manage.py runserver 0.0.0.0:5000
+    ports:
+      - '5000:5000'
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+networks:
+  bookshop_network:
+    external: true
+
+volumes:
+  postgres_data:
+  redis_store:
